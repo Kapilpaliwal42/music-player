@@ -1,0 +1,27 @@
+basic file/dir structures:
+//remove node modules folder
+spotify
+|
+backend
+|
+\---node_modules
+|
+\---src
+|    +---db
+|   |       DBConnect.js
+|   |
+|    +---models
+|   |       gemini_schema.png
+|   |       gemini_schema.svg
+|   |       kapil_schema.svg
+|   |
+|   \---routes
+|          healthcheck.js
+|
+/---app.js
+\---package.json
+\---.env
+\---Constants.js
+/---index.js
+\---package-lock.json
+\---struct.txt
