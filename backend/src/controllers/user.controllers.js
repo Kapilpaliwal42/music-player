@@ -1,11 +1,13 @@
 import User from "../models/user.models.js"
-import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary.js";
 import asyncHandler from "../utils/asyncHandler.js"
 import APIError from "../utils/APIError.js";
 import { options } from "../../Constants.js";
 import Follow from "../models/follow.models.js";
+import mongoose from "mongoose";
+import { unlinkSync } from "fs";
+
 
 export const registerUser = asyncHandler(async (req, res) => {
     try {
@@ -18,27 +20,31 @@ export const registerUser = asyncHandler(async (req, res) => {
         if(existingUser){
             throw new APIError(409, "User with this email or username already exists");
         }
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const profileImagePath = req.file?.path;
+        
+        const profileImage = req.file?.path;
 
-        if (!profileImagePath) {
+
+        if (!profileImage) {
             throw new APIError(400, "Profile image is required");
         }
-    const upload = await uploadToCloudinary(profileImagePath);
+    const upload = await uploadToCloudinary(profileImage);
     console.log("Profile image upload result:", upload);
 
+   
+
     
-        const user = new User({
+        const user = await User.create({
             username,
             email,
-            password: hashedPassword,
+            password,
             fullname,
             profileImage: upload?.url || "",
+            profileImagePublicId: upload?.public_id || ""
         });
-        await user.save();
         return res.status(201).json({message: "User registered successfully", user});
     } catch (error) {
         console.error("Error registering user:", error);
+        unlinkSync(req.file.path);
         return res.status(500).json({message: "Error registering user:", error: error.message});
     }
 }
@@ -55,7 +61,7 @@ const generateAccessAndRefreshToken = async (user_id) => {
         
     } catch (error) {
         console.error("Error generating tokens:", error);
-        throw new APIError(500, "Internal server error");
+        throw new APIError(500,error.message,error);
     }
 }
 
@@ -65,7 +71,7 @@ export const loginUser = asyncHandler(async (req, res) => {
         if([username ?? email, password].some((item) => item.trim() === "")){
             throw new APIError(400, "All fields are required");
         }
-        let user = await User.findOne({$or: [{email}, {username}]});
+        let user = await User.findOne({$or: [{email}, {username}]}).select("+password");
         if(!user){
             throw new APIError(404, "User not found");
         }
@@ -73,6 +79,8 @@ export const loginUser = asyncHandler(async (req, res) => {
             throw new APIError(403, "account has been deleted, please contact support");
         }
         const isPasswordValid = await user.comparePassword(password);
+        console.log("isPasswordValid",isPasswordValid,password);
+        
         if(!isPasswordValid){
             throw new APIError(401, "Invalid credentials");
         }
@@ -80,11 +88,11 @@ export const loginUser = asyncHandler(async (req, res) => {
         user.isActive = true;
         await user.save();
         user = await User.findById(user._id).select("-password  -__v -createdAt -updatedAt");
-        return res.status(200).cookie("accessToken", accessToken, options).cookie("refreshToken", refreshToken, options).json({message: "User logged in successfully", user , accessToken, refreshToken});
+        return res.status(200).cookie("accessToken", accessToken, options).cookie("refreshToken", refreshToken, options).json({message: "User logged in successfully", user , accessToken});
 
     } catch (error) {
         console.error("Error logging in user:", error);
-        return res.status(500).json({message: "Internal server error"});
+        return res.status(500).json({message: "Internal server error", error: error.message});
     }
 })
 
@@ -102,7 +110,7 @@ export const logoutUser = asyncHandler(async (req, res) => {
         .status(200).json({message: "User logged out successfully"});
     } catch (error) {
         console.error("Error logging out user:", error);
-        return res.status(500).json({message: "Internal server error"});
+        return res.status(500).json({message: "Internal server error", error: error.message});
     }
 
 })
@@ -119,7 +127,7 @@ export const getUserProfile = asyncHandler(async (req, res) => {
         return res.status(200).json({ user });
     } catch (error) {
         console.error("Error fetching user profile:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({ message: "Internal server error" , error: error.message});
     }
 });
 
@@ -144,13 +152,13 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
         return res.status(200).json({ message: "User profile updated successfully", user });
     } catch (error) {
         console.error("Error updating user profile:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({ message: "Internal server error" , error: error.message});
     }
 });
 
 export const changeUserPassword = asyncHandler(async (req, res) => {
     try {
-        const user = await User.findById(req.user._id);
+        let user = await User.findById(req.user._id);
         if (!user) {
             throw new APIError(404, "User not found");
         }
@@ -161,16 +169,21 @@ export const changeUserPassword = asyncHandler(async (req, res) => {
         if ([currentPassword, newPassword].some((item) => item.trim() === "")) {
             throw new APIError(400, "All fields are required");
         }
+        console.log("new password is here :",newPassword);
+        console.log("old password is also here :",currentPassword);
+        
         const isPasswordValid = await user.comparePassword(currentPassword);
         if (!isPasswordValid) {
+            console.log("password is not valid");
             throw new APIError(401, "Invalid credentials");
+            
         }
         user.password = newPassword;
         await user.save();
         return res.status(200).json({ message: "Password changed successfully" });
     } catch (error) {
         console.error("Error changing user password:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({ message: "Internal server error", error: error.message});
     }
 });
 
@@ -196,7 +209,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
         return res.status(200).json({ accessToken: newAccessToken });
     } catch (error) {
         console.error("Error refreshing token:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({ message: "Internal server error", error: error.message});
     }
 });
 
@@ -213,18 +226,20 @@ export const changeUserProfilePicture = asyncHandler(async (req, res) => {
         if (!profileImagePath) {
             throw new APIError(400, "No profile image provided");
         }
-        const oldImagePublicId = user.profileImage;
+        const oldImagePublicId = user.profileImagePublicId;
         const upload = await uploadToCloudinary(profileImagePath);
         if(!upload){
             throw new APIError(500, "Error uploading profile image");
         }
         await deleteFromCloudinary(oldImagePublicId);
         user.profileImage = upload.url;
+        user.profileImagePublicId = upload.public_id;
         await user.save();
         return res.status(200).json({ message: "Profile picture updated successfully" });
     } catch (error) {
         console.error("Error changing profile picture:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        unlinkSync(req.file.path);
+        return res.status(500).json({ message: "Internal server error", error: error.message});
     }
 });
 
@@ -242,7 +257,7 @@ export const getAllUsers = asyncHandler(async (req, res) => {
         return res.status(200).json({ users });
     } catch (error) {
         console.error("Error fetching all users:", error);
-        throw new APIError(500, "Internal server error");
+        throw new APIError(500, error.message, error);
     }
 });
 
@@ -266,7 +281,7 @@ export const toggleFavoriteSong = asyncHandler(async (req, res) => {
         return res.status(200).json({ message: "Favorite songs updated successfully", favorites: user.favorites });
     } catch (error) {
         console.error("Error toggling favorite song:", error);
-        throw new APIError(500, "Internal server error");
+        throw new APIError(500,error.message,error);
     }
 });
 
@@ -281,7 +296,7 @@ export const deleteUserAccount = asyncHandler(async (req, res) => {
         return res.status(200).json({ message: "your account has been deleted successfully" });
     } catch (error) {
         console.error("Error deleting user account:", error);
-        throw new APIError(500, "Internal server error");
+        throw new APIError(500, error.message, error);
     }
 });
 
@@ -297,7 +312,7 @@ export const getUserHistory = asyncHandler(async (req, res) => {
         return res.status(200).json({ history: user.history });
     } catch (error) {
         console.error("Error fetching user history:", error);
-        throw new APIError(500, "Internal server error");
+        throw new APIError(500, error.message, error);
     }
 });
 
@@ -316,7 +331,7 @@ export const getUserFollowCount = asyncHandler(async (req, res) => {
         
     } catch (error) {
         console.error("Error fetching user followers:", error);
-        throw new APIError(500, "Internal server error");
+        throw new APIError(500, error.message, error);
     }
 });
 
@@ -359,7 +374,7 @@ export const getUserFollowings = asyncHandler(async (req, res) => {
         return res.status(200).json({ following });
     } catch (error) {
         console.error("Error fetching user followings:", error);
-        throw new APIError(500, "Internal server error");
+        throw new APIError(500, error.message, error);
     }
 });
 
@@ -402,7 +417,7 @@ export const getUserFollowers = asyncHandler(async (req, res) => {
         return res.status(200).json({ followers });
     } catch (error) {
         console.error("Error fetching user followers:", error);
-        throw new APIError(500, "Internal server error");
+        throw new APIError(500, error.message, error);
     }
 });
 

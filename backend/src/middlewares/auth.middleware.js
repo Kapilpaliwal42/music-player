@@ -9,8 +9,8 @@ export const authenticate = asyncHandler(async (req, res, next) => {
         throw new APIError(401, "Authentication token is missing");
     }
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = await User.findById(decoded._id);
+        const decoded = jwt.verify(token, process.env.KEY);
+        req.user = await User.findById(decoded.id);
         if (!req.user) {
             throw new APIError(404, "User not found");
         }
@@ -28,3 +28,12 @@ export const isAdmin = async (req, res, next) => {
     next();
 
 }
+
+export const isDeleted = async (req, res, next) => {
+    const user = await User.findById(req.user._id);
+    if (user.isDeleted) {
+        return res.status(403).json({ message: "Access denied. User has been deleted." });
+    }
+    next();
+
+};

@@ -1,23 +1,24 @@
-import { Schema } from "mongoose";
+import mongoose, { Schema  } from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
+
 const songSchema = new Schema({
-  name: {
+  title: {
     type: String,
     required: true
   },
-  artist: {
+  artist: [{
     type: Schema.Types.ObjectId,
     ref: "Artist",
     required: true
-  },
-  artistName: {
+  }],
+  artistName: [{
     type: String,
     required: true,
     trim: true,
     lowercase: true,
     index: true,
     default: "unknown"
-  },
+  }],
   description: {
     type: String
   },
@@ -50,24 +51,27 @@ const songSchema = new Schema({
     type: String,
     required: true
   }, 
+  coverId: {
+    type: String
+  }, 
   audioFile: {
     type: String,
     required: true
   }, 
+  audioId: {
+    type: String
+  }, 
   lyrics: {
     type: String
   }, 
-  videoId: {
-    type: String
-  },
+  
   playCount: {
     type: Number,
     default: 0
   },
-  source: {
-    type: String,
-    enum: ["local", "ytmusic"],
-    required: true
+  owner: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
   }
 
 }, { timestamps: true });

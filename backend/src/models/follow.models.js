@@ -1,4 +1,5 @@
 import {Schema} from "mongoose";
+import mongoose from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 const followSchema = new Schema({
     follower: { type: Schema.Types.ObjectId, ref: "User", required: true },

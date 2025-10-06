@@ -1,5 +1,8 @@
 import cloudinary from 'cloudinary';
 import fs from 'fs';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 cloudinary.v2.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -10,7 +13,7 @@ cloudinary.v2.config({
 export const uploadToCloudinary = async (localFilePath) => {
     try{
         if(!localFilePath) return null;
-        const result = await cloudinary.v2.uploader.upload(localFilePath,{resource_type:"auto"});
+        const result = await cloudinary.v2.uploader.upload(localFilePath,{resource_type:"auto",timeout:60000});
         console.info("File uploaded to Cloudinary successfully", result.url);
         fs.unlinkSync(localFilePath);
         return result;
@@ -21,9 +24,13 @@ export const uploadToCloudinary = async (localFilePath) => {
     }
 }
 
+
+
+
 export const deleteFromCloudinary = async (publicId) => {
     try{
         if(!publicId) return null;
+       
         const result = await cloudinary.v2.uploader.destroy(publicId);
         console.info("File deleted from Cloudinary successfully", result);
         return result;

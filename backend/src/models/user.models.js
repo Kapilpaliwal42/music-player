@@ -1,7 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-const userSchema = new mongoose.Schema(
+const userSchema = new Schema(
   {
     fullname: {
       type: String,
@@ -25,8 +25,7 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
-      trim: true,
+      required: true
     },
     role: {
       type: String,
@@ -34,6 +33,10 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin"],
     },
     profileImage: {
+      type: String,
+      default: "",
+    },
+    profileImagePublicId: {
       type: String,
       default: "",
     },
@@ -83,7 +86,7 @@ userSchema.methods.generateAccessToken = function () {
 
 userSchema.methods.generateRefreshToken = function () {
   this.refreshToken = jwt.sign(
-    { id: this._id, role: this.role, refreshToken: this.refreshToken },
+    { id: this._id, role: this.role},
     process.env.KEY,
     { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
   );
