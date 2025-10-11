@@ -66,6 +66,16 @@ export const createPlaylist = asyncHandler(async (req, res) => {
             throw new APIError(500, "Error uploading cover image");
         }
 
+        const existing = await Playlist.findOne({
+            $and: [
+                { name: { $regex: name, $options: "i" } },
+                { user: user._id }
+            ]
+        });
+        if (existing) {
+            throw new APIError(409, "Playlist with this name already exists");
+        }
+
 
         const playlist = new Playlist({
             name,
@@ -152,20 +162,23 @@ export const updatePlaylist = asyncHandler(async (req, res) => {
 export const addSongsToPlaylist = asyncHandler(async (req, res) => {
     try {
         const playlistId = req.params.id;
-        const { songIds } = req.body;
+        let { songIds } = req.body;
         const user = await User.findById(req.user._id);
         if (!user) {
             throw new APIError(404, "User not found");
         }
-        const playlist = await Playlist.findById(playlistId);
+        let playlist = await Playlist.findById(playlistId);
         if(!playlist){
             throw new APIError(404, "Playlist not found");
 
         }
-        if (playlist.user.toString() !== user._id.toString()|| user.role !== "admin") {
+        if (playlist.user.toString() !== user._id.toString() && user.role !== "admin") {
+            console.log(playlist.user);
+            console.log(user._id);
+            
             throw new APIError(403, "Access denied. You are not the owner of this playlist.");
         }
-        songIds = Array.isArray(songIds) ? songIds : [songIds];
+        songIds = Array.isArray(songIds) ? songIds : songIds.split(" ");
         const songs = await Song.find({ _id: { $in: songIds } });
         if (songs.length !== songIds.length) {
             throw new APIError(404, "One or more songs not found");
@@ -181,19 +194,19 @@ export const addSongsToPlaylist = asyncHandler(async (req, res) => {
 export const removeSongsFromPlaylist = asyncHandler(async (req, res) => {
     try {
         const playlistId = req.params.id;
-        const { songIds } = req.body;
+        let { songIds } = req.body;
         const user = await User.findById(req.user._id);
         if (!user) {
             throw new APIError(404, "User not found");
         }
-        const playlist = await Playlist.findById(playlistId);
+        let playlist = await Playlist.findById(playlistId);
         if(!playlist){
             throw new APIError(404, "Playlist not found");
         }
-        if (playlist.user.toString() !== user._id.toString()|| user.role !== "admin") {
+        if (playlist.user.toString() !== user._id.toString() && user.role !== "admin") {
             throw new APIError(403, "Access denied. You are not the owner of this playlist.");
         }
-        songIds = Array.isArray(songIds) ? songIds : [songIds];
+        songIds = Array.isArray(songIds) ? songIds : songIds.split(" ");
         const songs = await Song.find({ _id: { $in: songIds } });
         if (songs.length !== songIds.length) {
             throw new APIError(404, "One or more songs not found");

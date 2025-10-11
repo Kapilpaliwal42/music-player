@@ -14,7 +14,7 @@ import {unlinkSync} from "fs";
 
 export const uploadSong = asyncHandler(async (req, res)=>{
     try {
-        let {title, year, genre, duration, description , artistIds, albumId} = req.body;
+        let {title, year, genre, duration, description , artistIds, albumId, lyrics} = req.body;
         const requiredFields = [title, artistIds, genre, albumId];
 if (requiredFields.some(item => typeof item !== "string" || item.trim() === "")) {
   throw new APIError(400, "title, artistId, genre, albumId are required");
@@ -66,6 +66,7 @@ if (requiredFields.some(item => typeof item !== "string" || item.trim() === ""))
             coverImage: coverUpload?.url,
             coverId: coverUpload?.public_id,
             owner: req.user._id,
+            lyrics: lyrics || "No lyrics available"
         })
         await song.save();
         await album.songs.push(song._id);
@@ -93,7 +94,9 @@ export const searchSongs = asyncHandler(async (req, res)=>{
                 {artistName:{$regex: query, $options: "i"}},
                 {albumName:{$regex: query, $options: "i"}},
                 {genre:{$regex: query, $options: "i"}},
-                {description:{$regex: query, $options: "i"}}
+                {description:{$regex: query, $options: "i"}},
+                {lyrics:{$regex: query, $options: "i"}},
+                {year:{$regex: query, $options: "i"}}
             ]
         }).populate("artist", "name image")
     .populate("album", "name coverImage").select("-__v -createdAt -updatedAt -audioFile -audioId -coverId")
@@ -239,7 +242,7 @@ export const updateSong = asyncHandler(async (req, res)=>{
             throw new APIError(404, "Song not found");
         }
 
-        const {title, year, genre, duration, description , artistIds, albumId} = req.body;
+        const {title, year, genre, duration, description , artistIds, albumId, lyrics} = req.body;
 
 
          if (req.files?.audioFile?.[0]) {
@@ -253,8 +256,9 @@ export const updateSong = asyncHandler(async (req, res)=>{
     if (req.files?.coverImage?.[0]) {
         const coverUpload = await uploadToCloudinary(req.files.coverImage[0].path);
         if (!coverUpload) throw new APIError(500, "Failed to upload new cover image");
-        if (song.coverImage) await deleteFromCloudinary(song.coverImage);
+        if (song.coverImage) await deleteFromCloudinary(song.coverId);
         song.coverImage = coverUpload.url;
+        song.coverId = coverUpload.public_id;
     }
 
     if (artistIds) {
@@ -287,6 +291,7 @@ export const updateSong = asyncHandler(async (req, res)=>{
     song.genre = genre || song.genre;
     song.duration = duration || song.duration;
     song.description = description || song.description;
+    song.lyrics = lyrics || song.lyrics || "No lyrics available";
 
     await song.save();
     return res.status(200).json({message: "Song updated successfully", song});
@@ -304,7 +309,7 @@ export const updateSong = asyncHandler(async (req, res)=>{
 
 export const deleteSong = asyncHandler(async (req, res)=>{
     try {
-        const songId = req.params.id || req.songId;
+        const songId = req.params.id || req.query.songId;
 
         const song = await Song.findById(songId);
         if(!song){

@@ -11,8 +11,8 @@ router.get("/get-by-id/:id",authenticate,isDeleted,getPlaylistById);
 router.post("/create",upload.single("coverImage"),authenticate,isDeleted,checkImageExtension,createPlaylist);
 router.get("/get-user-playlists",authenticate,isDeleted,getUserPlaylists);
 router.put("/update",upload.single("coverImage"),authenticate,isDeleted,checkImageExtension,updatePlaylist);
-router.put("/add-songs",authenticate,isDeleted,addSongsToPlaylist);
-router.put("/remove-songs",authenticate,isDeleted,removeSongsFromPlaylist);
+router.put("/add-songs/:id",authenticate,isDeleted,addSongsToPlaylist);
+router.put("/remove-songs/:id",authenticate,isDeleted,removeSongsFromPlaylist);
 router.delete("/delete/:id",authenticate||isAdmin,isDeleted,deletePlaylist);
 
 export default router;

@@ -2,7 +2,8 @@ import User from "../models/user.models.js"
 import { deleteFromCloudinary } from "../utils/cloudinary.js";
 import asyncHandler from "../utils/asyncHandler.js"
 import APIError from "../utils/APIError.js";
-
+import Follow from "../models/follow.models.js";
+import Playlist from "../models/playlist.models.js";
 // Admin Controllers
 
 export const adminGetAllUsers = asyncHandler(async (req, res) => {
@@ -30,6 +31,8 @@ export const deleteUser = asyncHandler(async (req, res) => {
         if (!user) {
             throw new APIError(404, "User not found");
         }
+        await Follow.deleteMany({ $or: [{ follower: user._id }, { following: user._id }] });
+        await Playlist.deleteMany({ user: user._id });
         if (user.profileImage) {
             await deleteFromCloudinary(user.profileImagePublicId);
         }

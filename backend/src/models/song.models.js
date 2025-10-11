@@ -62,7 +62,9 @@ const songSchema = new Schema({
     type: String
   }, 
   lyrics: {
-    type: String
+    type: String,
+    trim: true,
+    default: "No lyrics available"
   }, 
   
   playCount: {

@@ -16,7 +16,8 @@ router.get("/listen/:id",authenticate,isDeleted,getSongById)
 
 router.put("/update/:id",upload.fields([{name:"audioFile" , maxCount:1},{name:"coverImage",maxCount:1}]),authenticate,isDeleted,ensureCoverImage,checkImageExtension,checkAudioExtension,getSongDuration,updateSong)
 
-router.delete("/delete",authenticate||isAdmin,isDeleted,deleteSong)
+router.delete("/delete/:id",authenticate||isAdmin,isDeleted,deleteSong)
+router.delete("/delete", authenticate || isAdmin, isDeleted, deleteSong);
 
 router.get("/next",authenticate,isDeleted,playNextSong)
 

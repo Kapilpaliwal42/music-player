@@ -71,7 +71,8 @@ export const loginUser = asyncHandler(async (req, res) => {
         if([username ?? email, password].some((item) => item.trim() === "")){
             throw new APIError(400, "All fields are required");
         }
-        let user = await User.findOne({$or: [{email}, {username}]}).select("+password");
+        const identifier = username?.trim() || email?.trim();
+        let user = await User.findOne({$or: [{email: identifier}, {username: identifier}]}).select("+password");
         if(!user){
             throw new APIError(404, "User not found");
         }
