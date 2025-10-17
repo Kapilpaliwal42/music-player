@@ -289,6 +289,7 @@ export const deleteSong = async (songId: string): Promise<{ message: string }> =
 export const deleteAlbum = async (albumId: string): Promise<{ message: string }> => apiClient(`/albums/delete/${albumId}`, { method: 'DELETE' });
 export const deleteArtist = async (artistId: string): Promise<{ message: string }> => apiClient(`/artists/delete/${artistId}`, { method: 'DELETE' });
 export const deletePlaylist = async (playlistId: string): Promise<{ message: string }> => apiClient(`/playlists/delete/${playlistId}`, { method: 'DELETE' });
+export const deleteAccount = async (): Promise<{ message: string }> => apiClient('/users/delete-account', { method: 'DELETE' });
 
 
 // --- Admin Functions ---

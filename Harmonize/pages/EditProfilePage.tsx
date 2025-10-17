@@ -1,10 +1,9 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../api';
 import { Loader2, ArrowLeft } from 'lucide-react';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 // --- Reusable UI Components ---
 
@@ -58,6 +57,7 @@ const EditProfilePage = () => {
                 <ProfileDetailsForm user={user} onUpdate={fetchUserProfile} />
                 <ProfilePictureForm user={user} onUpdate={fetchUserProfile} />
                 <ChangePasswordForm />
+                <DeleteAccountSection />
             </div>
         </div>
     );
@@ -105,11 +105,12 @@ const ProfileDetailsForm = ({ user, onUpdate }: FormProps) => {
     };
 
     return (
+        // FIX: The <Section> component was self-closing, causing a "missing children" error. The <form> is now correctly placed inside the <Section> as its child.
         <Section title="Profile Details">
             <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Fix: The Alert component requires children to display the message. */}
+                {/* FIX: The <Alert> components were self-closing and missing their content. The error and success messages are now passed as children. */}
                 {error && <Alert type="error">{error}</Alert>}
-                {/* Fix: The Alert component requires children to display the message. */}
+                {/* FIX: The <Alert> components were self-closing and missing their content. The error and success messages are now passed as children. */}
                 {success && <Alert type="success">{success}</Alert>}
                 <InputField label="Full Name" name="fullname" value={details.fullname} onChange={handleChange} />
                 <InputField label="Email Address" name="email" type="email" value={details.email} onChange={handleChange} />
@@ -162,18 +163,23 @@ const ProfilePictureForm = ({ user, onUpdate }: FormProps) => {
     };
 
     return (
+        // FIX: The <Section> component was self-closing, causing a "missing children" error. The <form> is now correctly placed inside the <Section> as its child.
         <Section title="Profile Picture">
-            <form onSubmit={handleSubmit} className="flex items-center gap-6">
-                <img src={preview} alt="Profile" className="w-24 h-24 rounded-full object-cover" />
-                <div className="flex-grow space-y-3">
-                    <input type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
-                    <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>Choose Image</Button>
-                    {imageFile && <p className="text-sm text-zinc-400 truncate">{imageFile.name}</p>}
-                    <Button type="submit" disabled={!imageFile || loading}>{loading ? 'Uploading...' : 'Upload & Save'}</Button>
-                    {/* Fix: The Alert component requires children to display the message. */}
-                    {error && <Alert type="error">{error}</Alert>}
-                    {/* Fix: The Alert component requires children to display the message. */}
-                    {success && <Alert type="success">{success}</Alert>}
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="flex items-center gap-6">
+                    <img src={preview} alt="Profile" className="w-24 h-24 rounded-full object-cover" />
+                    <div className="flex-grow space-y-3">
+                        <input type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
+                        <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>Choose Image</Button>
+                        {imageFile && <p className="text-sm text-zinc-400 truncate">{imageFile.name}</p>}
+                    </div>
+                </div>
+                {/* FIX: The <Alert> components were self-closing and missing their content. The error and success messages are now passed as children. */}
+                {error && <Alert type="error">{error}</Alert>}
+                {/* FIX: The <Alert> components were self-closing and missing their content. The error and success messages are now passed as children. */}
+                {success && <Alert type="success">{success}</Alert>}
+                <div className="pt-2 flex justify-end">
+                     <Button type="submit" disabled={!imageFile || loading}>{loading ? 'Uploading...' : 'Upload & Save'}</Button>
                 </div>
             </form>
         </Section>
@@ -221,11 +227,12 @@ const ChangePasswordForm = () => {
     };
 
     return (
+        // FIX: The <Section> component was self-closing, causing a "missing children" error. The <form> is now correctly placed inside the <Section> as its child.
         <Section title="Change Password">
              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Fix: The Alert component requires children to display the message. */}
+                {/* FIX: The <Alert> components were self-closing and missing their content. The error and success messages are now passed as children. */}
                 {error && <Alert type="error">{error}</Alert>}
-                {/* Fix: The Alert component requires children to display the message. */}
+                {/* FIX: The <Alert> components were self-closing and missing their content. The error and success messages are now passed as children. */}
                 {success && <Alert type="success">{success}</Alert>}
                 <InputField label="Current Password" name="currentPassword" type="password" value={passwords.currentPassword} onChange={handleChange} />
                 <InputField label="New Password" name="newPassword" type="password" value={passwords.newPassword} onChange={handleChange} />
@@ -237,5 +244,59 @@ const ChangePasswordForm = () => {
         </Section>
     );
 };
+
+
+// Delete Account Section
+const DeleteAccountSection = () => {
+    const { logout } = useAuth();
+    const navigate = useNavigate();
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    
+    const handleDelete = async () => {
+        setIsLoading(true);
+        try {
+            await api.deleteAccount();
+            logout();
+            navigate('/login', { replace: true });
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Failed to delete account.');
+            setIsLoading(false);
+            setIsModalOpen(false);
+        }
+    };
+    
+    return (
+        <>
+            {/* FIX: The <Section> component was self-closing, causing a "missing children" error. The content is now correctly placed inside the <Section> as its child. */}
+            <Section title="Danger Zone">
+                <div className="bg-red-900/20 border border-red-500/30 p-4 rounded-lg flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <div>
+                        <h3 className="font-semibold text-red-300">Delete Your Account</h3>
+                        <p className="text-sm text-zinc-400 mt-1 max-w-prose">Once you delete your account, there is no going back. All of your data, including playlists and liked songs, will be permanently removed. Please be certain.</p>
+                    </div>
+                    <Button 
+                        type="button" 
+                        onClick={() => setIsModalOpen(true)} 
+                        className="bg-red-600 hover:bg-red-700 text-white flex-shrink-0"
+                    >
+                        Delete Account
+                    </Button>
+                </div>
+            </Section>
+            <ConfirmationModal
+                isOpen={isModalOpen}
+                onClose={() => !isLoading && setIsModalOpen(false)}
+                onConfirm={handleDelete}
+                title="Confirm Account Deletion"
+                isLoading={isLoading}
+                confirmText="Yes, delete my account"
+            >
+                <p className="text-zinc-300">Are you absolutely sure? This action is irreversible.</p>
+            </ConfirmationModal>
+        </>
+    );
+};
+
 
 export default EditProfilePage;
