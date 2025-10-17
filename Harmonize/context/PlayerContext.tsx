@@ -50,6 +50,29 @@ export const PlayerProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const audioRef = useRef<HTMLAudioElement>(new Audio());
   const isSeekingRef = useRef(false);
 
+  // Helper to fetch full song details if audioFile is missing
+  const fetchAndSetSong = useCallback(async (song: Song) => {
+    if (song.audioFile) {
+        setCurrentSong(song);
+        return;
+    }
+    try {
+        // Set a temporary loading state by providing partial data without audio
+        setCurrentSong({ ...song, audioFile: '' }); 
+        const { song: fullSong } = await api.getSongById(song._id);
+        
+        // Update playlists with the full song data for future use
+        setOriginalPlaylist(prev => prev.map(s => s._id === song._id ? fullSong : s));
+        setShuffledPlaylist(prev => prev.map(s => s._id === song._id ? fullSong : s));
+
+        setCurrentSong(fullSong);
+    } catch (e) {
+        console.error("Error fetching song details", e);
+        // Handle error, maybe show a toast to the user
+        setCurrentSong(null); 
+    }
+  }, []);
+
   // FIX: Moved function declarations before their usage in useEffect to prevent reference errors.
   const getCurrentPlaylist = useCallback(() => {
     return isShuffled ? shuffledPlaylist : originalPlaylist;
@@ -60,7 +83,7 @@ export const PlayerProvider = ({ children }: React.PropsWithChildren<{}>) => {
     if (upNextQueue.length > 0) {
         const nextSong = upNextQueue[0];
         setUpNextQueue(prev => prev.slice(1)); // Consume the song from the queue
-        setCurrentSong(nextSong);
+        fetchAndSetSong(nextSong);
         return;
     }
 
@@ -83,13 +106,13 @@ export const PlayerProvider = ({ children }: React.PropsWithChildren<{}>) => {
     
     const nextIndex = (currentIndex + 1) % playlist.length;
     setCurrentIndex(nextIndex);
-    setCurrentSong(playlist[nextIndex]);
-  }, [currentIndex, getCurrentPlaylist, repeatMode, upNextQueue]);
+    fetchAndSetSong(playlist[nextIndex]);
+  }, [currentIndex, getCurrentPlaylist, repeatMode, upNextQueue, fetchAndSetSong]);
 
   // Effect to handle the actual audio source change
   useEffect(() => {
     const audio = audioRef.current;
-    if (currentSong) {
+    if (currentSong && currentSong.audioFile) {
       audio.src = currentSong.audioFile;
       audio.crossOrigin = "anonymous"; // Required for audio context
       audio.load();
@@ -99,7 +122,11 @@ export const PlayerProvider = ({ children }: React.PropsWithChildren<{}>) => {
         console.error("Audio playback failed:", error);
         setIsPlaying(false);
       });
-    } else {
+    } else if (!currentSong?.audioFile && currentSong?._id) {
+        // This is a loading state, do nothing and wait for fetchAndSetSong
+        setIsPlaying(false);
+    }
+    else {
       audio.pause();
       setIsPlaying(false);
     }
@@ -151,13 +178,13 @@ export const PlayerProvider = ({ children }: React.PropsWithChildren<{}>) => {
         const shuffled = [...newPlaylist].sort(() => Math.random() - 0.5);
         setShuffledPlaylist(shuffled);
         const newIndex = shuffled.findIndex(s => s._id === song._id);
-        setCurrentIndex(newIndex);
+        setCurrentIndex(newIndex > -1 ? newIndex : 0);
     } else {
         const newIndex = newPlaylist.findIndex(s => s._id === song._id);
-        setCurrentIndex(newIndex);
+        setCurrentIndex(newIndex > -1 ? newIndex : 0);
     }
-    setCurrentSong(song);
-  }, [isShuffled]);
+    fetchAndSetSong(song);
+  }, [isShuffled, fetchAndSetSong]);
 
   const setPlaylistAndPlay = useCallback((playlist: Song[], startIndex = 0) => {
     if (playlist && playlist.length > 0) {
@@ -187,8 +214,8 @@ export const PlayerProvider = ({ children }: React.PropsWithChildren<{}>) => {
     
     const prevIndex = (currentIndex - 1 + playlist.length) % playlist.length;
     setCurrentIndex(prevIndex);
-    setCurrentSong(playlist[prevIndex]);
-  }, [currentIndex, getCurrentPlaylist]);
+    fetchAndSetSong(playlist[prevIndex]);
+  }, [currentIndex, getCurrentPlaylist, fetchAndSetSong]);
 
   const seek = useCallback((time: number) => {
     if (audioRef.current && isFinite(time)) {
@@ -241,9 +268,9 @@ export const PlayerProvider = ({ children }: React.PropsWithChildren<{}>) => {
   }, []);
 
   const playFromQueue = useCallback((song: Song) => {
-      setCurrentSong(song);
+      fetchAndSetSong(song);
       removeFromQueue(song._id);
-  }, [removeFromQueue]);
+  }, [removeFromQueue, fetchAndSetSong]);
   
   const clearQueue = useCallback(() => {
       setUpNextQueue([]);

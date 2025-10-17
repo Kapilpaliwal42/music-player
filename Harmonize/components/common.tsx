@@ -63,7 +63,7 @@ export const SongCard: React.FC<SongCardProps> = ({ song, playlist, onSelect, on
       {onClear && (
         <button
           onClick={onClear}
-          className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10"
+          className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10"
           title="Remove from recents"
         >
           <X size={16} className="text-zinc-300 hover:text-white" />
@@ -71,7 +71,7 @@ export const SongCard: React.FC<SongCardProps> = ({ song, playlist, onSelect, on
       )}
       <div className="relative mb-3">
         <img src={song.coverImage} alt={song.title} className="w-full h-auto aspect-square object-cover rounded-md" />
-        <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+        <div className="absolute bottom-2 left-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 z-10">
             <div className="bg-black/40 rounded-full">
                 <MoreOptionsMenu
                     song={song}
@@ -83,13 +83,13 @@ export const SongCard: React.FC<SongCardProps> = ({ song, playlist, onSelect, on
         </div>
         <button 
           onClick={handlePlay}
-          className="absolute bottom-2 right-2 bg-indigo-500 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:scale-110"
+          className="absolute bottom-2 right-2 bg-indigo-500 p-3 rounded-full shadow-lg opacity-100 md:opacity-0 md:group-hover:opacity-100 md:translate-y-2 md:group-hover:translate-y-0 transition-all duration-300 hover:scale-110"
         >
           <Play size={20} className="text-white fill-white ml-0.5" />
         </button>
          <button
             onClick={handleBookmark}
-            className="absolute top-2 right-2 bg-black/40 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+            className="absolute top-2 right-2 bg-black/40 p-2 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110"
             title="Add to Library"
         >
             <Bookmark size={18} className={`transition-colors ${isBookmarked(song._id, 'songs') ? 'text-green-400 fill-green-400' : 'text-white'}`} />
@@ -119,7 +119,7 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({ album, onSelect, onClear }
     return (
       <Link to={`/album/${album._id}`} onClick={onSelect} className="block bg-zinc-800/50 p-4 rounded-lg hover:bg-zinc-700/70 transition-colors group cursor-pointer relative">
         {onClear && (
-          <button onClick={onClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
+          <button onClick={onClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
             <X size={16} className="text-zinc-300 hover:text-white" />
           </button>
         )}
@@ -127,7 +127,7 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({ album, onSelect, onClear }
             <img src={album.coverImage} alt={album.name} className="w-full h-auto aspect-square object-cover rounded-md" />
              <button
                 onClick={handleBookmark}
-                className="absolute top-2 right-2 bg-black/40 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+                className="absolute top-2 right-2 bg-black/40 p-2 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110"
                 title="Add to Library"
             >
                 <Bookmark size={18} className={`transition-colors ${isBookmarked(album._id, 'albums') ? 'text-green-400 fill-green-400' : 'text-white'}`} />
@@ -157,7 +157,7 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onSelect, onClea
     return (
         <Link to={`/artist/${artist._id}`} onClick={onSelect} className="block bg-zinc-800/50 p-4 rounded-lg hover:bg-zinc-700/70 transition-colors group cursor-pointer text-center relative">
             {onClear && (
-              <button onClick={onClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
+              <button onClick={onClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
                 <X size={16} className="text-zinc-300 hover:text-white" />
               </button>
             )}
@@ -165,7 +165,7 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onSelect, onClea
                 <img src={artist.image} alt={artist.name} className="w-full h-auto aspect-square object-cover rounded-full" />
                 <button
                     onClick={handleBookmark}
-                    className="absolute top-1 right-1 bg-black/40 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+                    className="absolute top-1 right-1 bg-black/40 p-2 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110"
                     title="Add to Library"
                 >
                     <Bookmark size={18} className={`transition-colors ${isBookmarked(artist._id, 'artists') ? 'text-green-400 fill-green-400' : 'text-white'}`} />
@@ -195,7 +195,7 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({ playlist, onSelect, 
     return (
         <Link to={`/playlist/${playlist._id}`} onClick={onSelect} className="bg-zinc-800/50 p-4 rounded-lg hover:bg-zinc-700/70 transition-colors group cursor-pointer flex items-center gap-4 relative">
             {onClear && (
-              <button onClick={onClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
+              <button onClick={onClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
                 <X size={16} className="text-zinc-300 hover:text-white" />
               </button>
             )}
@@ -206,7 +206,7 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({ playlist, onSelect, 
             </div>
              <button
                 onClick={handleBookmark}
-                className="absolute top-2 right-2 bg-black/40 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+                className="absolute top-2 right-2 bg-black/40 p-2 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110"
                 title="Add to Library"
             >
                 <Bookmark size={18} className={`transition-colors ${isBookmarked(playlist._id, 'playlists') ? 'text-green-400 fill-green-400' : 'text-white'}`} />
@@ -225,7 +225,7 @@ interface UserCardProps {
 export const UserCard: React.FC<UserCardProps> = ({ user, onSelect, onClear }) => (
     <div onClick={onSelect} className="bg-zinc-800/50 p-4 rounded-lg hover:bg-zinc-700/70 transition-colors group cursor-pointer text-center relative">
         {onClear && (
-          <button onClick={onClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
+          <button onClick={onClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
             <X size={16} className="text-zinc-300 hover:text-white" />
           </button>
         )}
