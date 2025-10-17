@@ -1,6 +1,6 @@
 import type { User, Song, Playlist, Artist, Album, GetSongsResponse, GetArtistsResponse, GetAlbumsResponse, GetLibraryResponse, BookmarkableItemType, SearchResponse, GetUsersResponse, FollowCountResponse, FollowersResponse, FollowingsResponse, GetArtistResponse, GetHistoryResponse } from './types';
 
-const BASE_API_URL = process.env.BACKEND_API_URL || 'http://localhost:5000/api/v1';
+const BASE_API_URL = process.env.BACKEND_API_URL || 'https://music-player-wtp8.onrender.com/api/v1';
 
 const getToken = () => localStorage.getItem('accessToken');
 
