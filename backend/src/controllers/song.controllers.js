@@ -1,12 +1,13 @@
 import User from "../models/user.models.js";
 import Song from "../models/song.models.js";
-import { deleteFromCloudinary , uploadToCloudinary } from "../utils/cloudinary.js";
+import { deleteImageFromCloudinary,deleteMusicFromCloudinary , uploadBufferToCloudinary } from "../utils/cloudinary.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import APIError from "../utils/APIError.js";
 import mongoose from "mongoose";
 import Album from "../models/albums.models.js";
 import Artist from "../models/artist.models.js";
-import {unlinkSync} from "fs";
+import Playlist from "../models/playlist.models.js";
+
 
 
 
@@ -20,8 +21,8 @@ if (requiredFields.some(item => typeof item !== "string" || item.trim() === ""))
   throw new APIError(400, "title, artistId, genre, albumId are required");
 }
 
-        const audioFile = req.files?.audioFile?.[0].path;
-        const coverImage = req.files?.coverImage?.[0].path;
+        const audioFile = req.files?.audioFile?.[0];
+        const coverImage = req.files?.coverImage?.[0];
         if(!audioFile || !coverImage){
             throw new APIError(400, "Audio file and cover image are required");
             }
@@ -40,14 +41,12 @@ if (requiredFields.some(item => typeof item !== "string" || item.trim() === ""))
         }
         const albumName = album.name;
 
-        const audioUpload = await uploadToCloudinary(audioFile);
-        const coverUpload = await uploadToCloudinary(coverImage);
+        const audioUpload = await uploadBufferToCloudinary(audioFile.buffer, `songs/${Date.now()}_${audioFile.originalname}`);
+        const coverUpload = await uploadBufferToCloudinary(coverImage.buffer, `covers/${Date.now()}_${coverImage.originalname}`);
 
         if(!audioUpload || !coverUpload){
-            await deleteFromCloudinary(audioUpload?.public_id);
-            await deleteFromCloudinary(coverUpload?.public_id);
-            unlinkSync(req.files.audioFile[0].path);
-            unlinkSync(req.files.coverImage[0].path);
+            await deleteMusicFromCloudinary(audioUpload?.public_id);
+            await deleteImageFromCloudinary(coverUpload?.public_id);
          throw new APIError(500, "Error uploading audio or cover image");
         }
 
@@ -55,7 +54,7 @@ if (requiredFields.some(item => typeof item !== "string" || item.trim() === ""))
             title,
             artistName,
             albumName,
-            year,
+            year: year || album.releaseDate.getFullYear(),
             genre,
             duration,
             description,
@@ -76,8 +75,6 @@ if (requiredFields.some(item => typeof item !== "string" || item.trim() === ""))
 
     } catch (error) {
         console.error("Error uploading song:", error);
-        unlinkSync(req.files.audioFile[0].path);
-        unlinkSync(req.files.coverImage[0].path);
         throw new APIError(500, error.message, error);   
     }
 })
@@ -95,17 +92,19 @@ export const searchSongs = asyncHandler(async (req, res)=>{
                 {albumName:{$regex: query, $options: "i"}},
                 {genre:{$regex: query, $options: "i"}},
                 {description:{$regex: query, $options: "i"}},
-                {lyrics:{$regex: query, $options: "i"}},
-                {year:{$regex: query, $options: "i"}}
-            ]
+                {lyrics:{$regex: query, $options: "i"}}
+                ]
         }).populate("artist", "name image")
     .populate("album", "name coverImage").select("-__v -createdAt -updatedAt -audioFile -audioId -coverId")
     .limit(30)
     .sort({ playCount: -1 });
-
         let artists = await Artist.find({name:{$regex: query, $options: "i"}});
         let albums = await Album.find({name:{$regex: query, $options: "i"}});
+        let playlists = await Playlist.find({name:{$regex: query, $options: "i"}});
 
+        if(!playlists.length){
+            playlists = [];
+        }
         if(!songs.length){
             songs = [];
         }
@@ -118,9 +117,10 @@ export const searchSongs = asyncHandler(async (req, res)=>{
         songs.sort((a, b) => b.playCount - a.playCount);
         albums.sort((a, b) => b.name - a.name);
         artists.sort((a, b) => b.name - a.name);
+        playlists.sort((a, b) => b.name - a.name);
 
         songs.splice(30);
-        return res.status(200).json({songs,artists,albums});
+        return res.status(200).json({songs,artists,albums,playlists});
     } catch (error) {
         console.error("Error searching songs:", error);
         throw new APIError(500,error.message,error);
@@ -246,17 +246,17 @@ export const updateSong = asyncHandler(async (req, res)=>{
 
 
          if (req.files?.audioFile?.[0]) {
-        const audioUpload = await uploadToCloudinary(req.files.audioFile[0].path);
+        const audioUpload = await uploadBufferToCloudinary(req.files.audioFile[0].buffer, `songs/${Date.now()}_${req.files.audioFile[0].originalname}`);
         if (!audioUpload) throw new APIError(500, "Failed to upload new audio file");
-        if (song.audioFile) await deleteFromCloudinary(song.audioId);
+        if (song.audioFile) await deleteMusicFromCloudinary(song.audioId);
         song.audioFile = audioUpload.url;
         song.audioId = audioUpload.public_id;
     }
 
     if (req.files?.coverImage?.[0]) {
-        const coverUpload = await uploadToCloudinary(req.files.coverImage[0].path);
+        const coverUpload = await uploadBufferToCloudinary(req.files.coverImage[0].buffer, `covers/${Date.now()}_${req.files.coverImage[0].originalname}`);
         if (!coverUpload) throw new APIError(500, "Failed to upload new cover image");
-        if (song.coverImage) await deleteFromCloudinary(song.coverId);
+        if (song.coverImage) await deleteImageFromCloudinary(song.coverId);
         song.coverImage = coverUpload.url;
         song.coverId = coverUpload.public_id;
     }
@@ -301,8 +301,6 @@ export const updateSong = asyncHandler(async (req, res)=>{
     }
     catch(error){
         console.error("Error updating song:", error);
-        unlinkSync(req.files.audioFile[0].path);
-        unlinkSync(req.files.coverImage[0].path);
         throw new APIError(500, error.message, error);
     }
 })
@@ -326,9 +324,9 @@ export const deleteSong = asyncHandler(async (req, res)=>{
           { $or: [{ favorites: song._id }, { history: song._id }, { playlists: song._id}] },
           { $pull: { favorites: song._id, history: song._id, playlists: song._id }  }
         );
-        await deleteFromCloudinary(song.audioId);
-        await deleteFromCloudinary(song.coverId);
-        
+        await deleteMusicFromCloudinary(song.audioId);
+        await deleteImageFromCloudinary(song.coverId);
+
         await Song.deleteOne({_id: song._id});
         return res.status(200).json({message: "Song deleted successfully"});
     }
@@ -396,6 +394,54 @@ export const playPreviousSong = asyncHandler(async (req, res, next) => {
 });
 
 
+export const getTopPlayedSongs = asyncHandler(async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 10;
+        const songs = await Song.find().sort({ playCount: -1 }).limit(limit);
+        return res.status(200).json({ songs });
+    } catch (error) {
+        console.error("Error fetching top played songs:", error);
+         throw new APIError(500, error.message, error);       
+    }
+});
 
+export const getMostRecentSongs = asyncHandler(async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 10;
+        const songs = await Song.find().sort({ createdAt: -1 }).limit(limit);
+        return res.status(200).json({ songs });
+    } catch (error) {
+        console.error("Error fetching most recent songs:", error);
+        throw new APIError(500, error.message, error);
+    }
+});
 
- 
+export const getSongsByArtist = asyncHandler(async (req, res) => {
+    try {
+        const artistId = req.params.artistId;
+        const artist = await Artist.findById(artistId);
+        if (!artist) {
+            throw new APIError(404, "Artist not found");
+        }
+        const songs = await Song.find({ artist: artistId }).sort({ playCount: -1 });
+        return res.status(200).json({ songs });
+    } catch (error) {
+        console.error("Error fetching songs by artist:", error);
+        throw new APIError(500, error.message, error);
+    }
+});
+
+export const getSongsByAlbum = asyncHandler(async (req, res) => {
+    try {
+        const albumId = req.params.albumId;
+        const album = await Album.findById(albumId);
+        if (!album) {
+            throw new APIError(404, "Album not found");
+        }
+        const songs = await Song.find({ album: albumId }).sort({ playCount: -1 });
+        return res.status(200).json({ songs });
+    } catch (error) {
+        console.error("Error fetching songs by album:", error);
+        throw new APIError(500, error.message, error);
+    }
+});

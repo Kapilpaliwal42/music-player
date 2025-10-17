@@ -1,5 +1,5 @@
 import User from "../models/user.models.js"
-import { deleteFromCloudinary } from "../utils/cloudinary.js";
+import { deleteImageFromCloudinary } from "../utils/cloudinary.js";
 import asyncHandler from "../utils/asyncHandler.js"
 import APIError from "../utils/APIError.js";
 import Follow from "../models/follow.models.js";
@@ -34,7 +34,7 @@ export const deleteUser = asyncHandler(async (req, res) => {
         await Follow.deleteMany({ $or: [{ follower: user._id }, { following: user._id }] });
         await Playlist.deleteMany({ user: user._id });
         if (user.profileImage) {
-            await deleteFromCloudinary(user.profileImagePublicId);
+            await deleteImageFromCloudinary(user.profileImagePublicId);
         }
         const result = await User.deleteOne({ _id: req.params.id });
         if (result.deletedCount === 0) {
@@ -92,3 +92,46 @@ export const forceLogout = asyncHandler(async (req, res) => {
         throw new APIError(500,error.message,error);
     }
 });
+
+export const getUserStatistics = asyncHandler(async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            throw new APIError(404, "User not found");
+        }
+        const totalUsers = await User.countDocuments();
+        const activeUsers = await User.countDocuments({ isActive: true });
+        const admins = await User.countDocuments({ role: "admin" });
+        return res.status(200).json({ totalUsers, activeUsers, admins });
+    } catch (error) {
+        console.error("Error fetching user statistics:", error);
+        throw new APIError(500, error.message, error);
+    }
+});
+
+export const getUserPlaylists = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.params.id || req.user._id;
+        const playlists = await Playlist.find({ user: userId }).populate('songs').populate('user', 'username profileImage');
+        return res.status(200).json({ playlists });
+    } catch (error) {
+        console.error("Error fetching user playlists:", error);
+        throw new APIError(error.statusCode || 500, error.message, error);
+    }
+});
+
+export const deleteUserPlaylist = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const playlistId = req.params.playlistId;
+        const playlist = await Playlist.findOneAndDelete({ _id: playlistId, user: userId });
+        if (!playlist) {
+            throw new APIError(404, "Playlist not found");
+        }
+        return res.status(200).json({ message: "Playlist deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting user playlist:", error);
+        throw new APIError(500, error.message, error);
+    }
+});
+

@@ -4,8 +4,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import Song from "../models/song.models.js";
 import APIError from "../utils/APIError.js";
 import Artist from "../models/artist.models.js";
-import fs from "fs";
-import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary.js";
+import { deleteImageFromCloudinary, deleteMusicFromCloudinary, uploadBufferToCloudinary } from "../utils/cloudinary.js";
 
 
 
@@ -46,11 +45,11 @@ export const createArtist = asyncHandler(async (req, res) => {
         if (existingArtist) {
             throw new APIError(409, "Artist with this name and genre already exists");
         }
-        const image = req.file?.path;
+        const image = req.file;
         if (!image) {
             throw new APIError(400, "Image is required");
         }
-        const upload = await uploadToCloudinary(image);
+        const upload = await uploadBufferToCloudinary(image.buffer, `artist_images/${Date.now()}_${image.originalname}`);
         if (!upload) {
             throw new APIError(500, "Error uploading image");
         }
@@ -66,9 +65,6 @@ export const createArtist = asyncHandler(async (req, res) => {
         
     } catch (error) {
         console.error("Error creating artist:", error);
-        if (fs.existsSync(req.file?.path)) {
-                fs.unlinkSync(req.file.path);
-            }
         throw new APIError(500, error.message, error);
     }
 })
@@ -111,13 +107,13 @@ export const updateArtist = asyncHandler(async (req, res) => {
             artist.genre = genre?(Array.isArray(genre)) ? genre : [genre]: artist.genre;
         }
         if (req.file) {
-            const image = req.file.path;
-            const upload = await uploadToCloudinary(image);
+            const image = req.file;
+            const upload = await uploadBufferToCloudinary(image.buffer, `artist_images/${Date.now()}_${image.originalname}`);
             if(!upload){
                 throw new APIError(500, "Error uploading image");
             }
             if (artist.image) {
-                await deleteFromCloudinary(artist.imageId);
+                await deleteImageFromCloudinary(artist.imageId);
             }
             artist.image = upload.url;
             artist.imageId = upload.public_id;
@@ -143,17 +139,17 @@ export const deleteArtist = asyncHandler(async (req, res) => {
         
         const albums = await Album.find({ artist: artistId });
         for (const album of albums) {
-            await deleteFromCloudinary(album.coverId);
+            await deleteImageFromCloudinary(album.coverId);
             await Album.deleteOne({ _id: album._id });
         }
 
         const songs = await Song.find({ artist: artistId });
         for (const song of songs) {
-            await deleteFromCloudinary(song.audioId);
-            await deleteFromCloudinary(song.coverId);
+            await deleteMusicFromCloudinary(song.audioId);
+            await deleteImageFromCloudinary(song.coverId);
             await Song.deleteOne({ _id: song._id });
         }
-        await deleteFromCloudinary(artist.imageId);
+        await deleteImageFromCloudinary(artist.imageId);
         await Artist.deleteOne({ _id: artistId });
         return res.status(200).json({ message: "Artist deleted successfully" });
 

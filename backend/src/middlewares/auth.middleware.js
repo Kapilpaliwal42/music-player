@@ -28,12 +28,3 @@ export const isAdmin = async (req, res, next) => {
     next();
 
 }
-
-export const isDeleted = async (req, res, next) => {
-    const user = await User.findById(req.user._id);
-    if (user.isDeleted) {
-        return res.status(403).json({ message: "Access denied. User has been deleted." });
-    }
-    next();
-
-};

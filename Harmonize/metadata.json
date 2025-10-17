@@ -1,0 +1,5 @@
+{
+  "name": "Harmonize Music Player",
+  "description": "A modern, sleek music player web application built with React and Tailwind CSS, featuring a dynamic UI, audio visualization, and lyrics support.",
+  "requestFramePermissions": []
+}

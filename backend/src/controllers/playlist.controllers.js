@@ -3,8 +3,7 @@ import User from "../models/user.models.js";
 import Song from "../models/song.models.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import APIError from "../utils/APIError.js";
-import { uploadToCloudinary , deleteFromCloudinary} from "../utils/cloudinary.js";
-import { unlinkSync } from "fs";
+import { uploadBufferToCloudinary , deleteImageFromCloudinary} from "../utils/cloudinary.js";
 import mongoose from "mongoose";
 
 export const getAllPublicPlaylists = asyncHandler(async (req, res) => {
@@ -56,11 +55,11 @@ export const createPlaylist = asyncHandler(async (req, res) => {
         if (!user) {
             throw new APIError(404, "User not found");
         }
-        const coverImage = req.file?.path;
+        const coverImage = req.file;
         if (!coverImage) {
             throw new APIError(400, "Cover image is required");
         }
-        const upload = await uploadToCloudinary(coverImage);
+        const upload = await uploadBufferToCloudinary(coverImage.buffer, `playlist_covers/${Date.now()}_${coverImage.originalname}`);
 
         if (!upload) {
             throw new APIError(500, "Error uploading cover image");
@@ -89,24 +88,36 @@ export const createPlaylist = asyncHandler(async (req, res) => {
         return res.status(201).json({ message: "Playlist created successfully", playlist });
     } catch (error) {
         console.error("Error creating playlist:", error);
-       if (req.file) {
-         unlinkSync(req.file.path);
-       }
         throw new APIError(500, error.message, error);   
     }
 })
 
 export const getUserPlaylists = asyncHandler(async (req, res) => {
     try {
-        const user = await User.findById(req.user._id);
+        const userId = req.params.id;
+        if (!userId) {
+            const user = await User.findById(req.user._id);
+            if (!user) {
+                throw new APIError(404, "User not found");
+            }
+            const playlists = await Playlist.find({ user: user._id }).populate("user", "username profileImage").select("-songs").sort({ createdAt: -1 });
+            if (!playlists || playlists.length === 0) {
+            return res.status(200).json({ message: "No playlists found for this user.", playlists: [] });
+        }
+    
+            return res.status(200).json({ playlists });
+        }
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw new APIError(400, "Invalid user ID");
+        }
+        const user = await User.findById(userId);
         if (!user) {
             throw new APIError(404, "User not found");
         }
-        const playlists = await Playlist.find({ user: user._id }).populate("user", "username profileImage").select("-songs").sort({ createdAt: -1 });
+        const playlists = await Playlist.find({ user: user._id, isPublic: true }).populate("user", "username profileImage").select("-songs").sort({ createdAt: -1 });
         if (!playlists || playlists.length === 0) {
-        return res.status(200).json({ message: "No playlists found for this user.", playlists: [] });
-    }
-
+            return res.status(200).json({ message: "No public playlists found for this user.", playlists: [] });
+        }
         return res.status(200).json({ playlists });
     } catch (error) {
         throw new APIError(500, error.message, error);   
@@ -126,19 +137,19 @@ export const updatePlaylist = asyncHandler(async (req, res) => {
         if(!playlist){
             throw new APIError(404, "Playlist not found");
         }
-        if (playlist.user.toString() !== user._id.toString()|| user.role !== "admin") {
+        if (playlist.user.toString() !== user._id.toString() && user.role !== "admin") {
             throw new APIError(403, "Access denied. You are not the owner of this playlist.");
         }
 
-        const coverImage = req.file?.path;
+        const coverImage = req.file;
         if (coverImage) {
-            const upload = await uploadToCloudinary(coverImage);
+            const upload = await uploadBufferToCloudinary(coverImage.buffer, `playlist_covers/${Date.now()}_${coverImage.originalname}`);
             if(!upload){
                 throw new APIError(500, "Error uploading cover image");
                 
             }
             if (playlist.coverImage) {
-                await deleteFromCloudinary(playlist.coverId);
+                await deleteImageFromCloudinary(playlist.coverId);
             }
             playlist.coverImage = upload.url;
             playlist.coverId = upload.public_id;
@@ -152,9 +163,7 @@ export const updatePlaylist = asyncHandler(async (req, res) => {
 
     } catch (error) {
         console.error("Error updating playlist:", error);
-        if (req.file) {
-            unlinkSync(req.file.path);
-        }
+        
         throw new APIError(500, error.message, error);       
     }
 })
@@ -183,7 +192,11 @@ export const addSongsToPlaylist = asyncHandler(async (req, res) => {
         if (songs.length !== songIds.length) {
             throw new APIError(404, "One or more songs not found");
         }
-        playlist.songs = [...new Set([...playlist.songs, ...songIds])];
+const existingSongIds = playlist.songs.map(id => id.toString());
+const newSongIds = songIds.map(id => id.toString());
+
+const merged = [...new Set([...existingSongIds, ...newSongIds])];
+playlist.songs = merged;
         await playlist.save();
         return res.status(200).json({ message: "Songs added to playlist successfully", playlist });
     } catch (error) {
@@ -235,10 +248,10 @@ export const deletePlaylist = asyncHandler(async (req, res) => {
         if(!playlist){
             throw new APIError(404, "Playlist not found");
         }
-        if (playlist.user.toString() !== user._id.toString()|| user.role !== "admin") {
+        if (playlist.user.toString() !== user._id.toString() && user.role !== "admin") {
             throw new APIError(403, "Access denied. You are not the owner of this playlist.")
         }
-        await deleteFromCloudinary(playlist.coverId);
+        await deleteImageFromCloudinary(playlist.coverId);
         await Playlist.deleteOne({ _id: playlistId });
         return res.status(200).json({ message: "Playlist deleted successfully" });
     }
