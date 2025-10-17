@@ -100,7 +100,7 @@ export const getUserPlaylists = asyncHandler(async (req, res) => {
             if (!user) {
                 throw new APIError(404, "User not found");
             }
-            const playlists = await Playlist.find({ user: user._id }).populate("user", "username profileImage").select("-songs").sort({ createdAt: -1 });
+            const playlists = await Playlist.find({ user: user._id }).populate("user", "username profileImage").sort({ createdAt: -1 });
             if (!playlists || playlists.length === 0) {
             return res.status(200).json({ message: "No playlists found for this user.", playlists: [] });
         }
