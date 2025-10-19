@@ -10,7 +10,17 @@ import albumRouter from "./src/routes/album.route.js"
 import playlistRouter from "./src/routes/playlist.route.js"
 
 
-const app = express()
+const app = express();
+
+// Force HTTPS in production
+if (process.env.NODE_ENV === "production") {
+  app.use((req, res, next) => {
+    if (req.headers["x-forwarded-proto"] !== "https") {
+      return res.redirect("https://" + req.headers.host + req.url);
+    }
+    next();
+  });
+}
 
 app.use(cors(
     {
