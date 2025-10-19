@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser, loginUser, logoutUser, getUserProfile, updateUserProfile, changeUserPassword, refreshToken , changeUserProfilePicture ,getAllUsers , getUserFollowCount , getUserFollowings , getUserFollowers , toggleFavoriteSong , deleteUserAccount , getUserHistory , toggleUserLibraryItem , clearUserLibrary , getUserLibrary,getFavoriteSongs } from '../controllers/user.controllers.js';
+import { registerUser, loginUser, logoutUser, getUserProfile, updateUserProfile, changeUserPassword, refreshToken , changeUserProfilePicture ,getAllUsers , getUserFollowCount , getUserFollowings , getUserFollowers , toggleFavoriteSong , deleteUserAccount , getUserHistory , toggleUserLibraryItem , clearUserLibrary , getUserLibrary,getFavoriteSongs,getUser } from '../controllers/user.controllers.js';
 import { authenticate , isAdmin  } from '../middlewares/auth.middleware.js';
 import {upload} from "../middlewares/multer.middleware.js"
 import { checkImageExtension } from '../middlewares/file.middleware.js';
@@ -31,6 +31,7 @@ router.get('/library', authenticate, getUserLibrary);
 router.put('/library', authenticate, toggleUserLibraryItem);
 router.delete('/library', authenticate, clearUserLibrary);
 router.get('/favorite-songs', authenticate, getFavoriteSongs);
+router.get('/get-by-id/:id', authenticate, getUser);
 
 
 import { toggleActiveStatus, deleteUser, adminGetAllUsers , changeUserRole, forceLogout , getUserStatistics , getUserPlaylists, deleteUserPlaylist} from '../controllers/user.admin.controllers.js';

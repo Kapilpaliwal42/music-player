@@ -45,7 +45,7 @@ export const registerUser = asyncHandler(async (req, res) => {
         return res.status(201).json({message: "User registered successfully", user});
     } catch (error) {
         console.error("Error registering user:", error);
-        return res.status(500).json({message: "Error registering user:", error: error.message});
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 }
 )
@@ -61,7 +61,7 @@ const generateAccessAndRefreshToken = async (user_id) => {
         
     } catch (error) {
         console.error("Error generating tokens:", error);
-        throw new APIError(500,error.message,error);
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 }
 
@@ -96,7 +96,7 @@ if ([safeUsername || safeEmail, safePassword].some((item) => item === '')) {
 
     } catch (error) {
         console.error("Error logging in user:", error);
-        return res.status(500).json({message: "Internal server error", error: error.message});
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 })
 
@@ -114,7 +114,7 @@ export const logoutUser = asyncHandler(async (req, res) => {
         .status(200).json({message: "User logged out successfully"});
     } catch (error) {
         console.error("Error logging out user:", error);
-        return res.status(500).json({message: "Internal server error", error: error.message});
+        throw new APIError(error.statusCode || 500, error.message || "Internal server error", error);
     }
 
 })
@@ -128,7 +128,7 @@ export const getUserProfile = asyncHandler(async (req, res) => {
         return res.status(200).json({ user });
     } catch (error) {
         console.error("Error fetching user profile:", error);
-        return res.status(500).json({ message: "Internal server error" , error: error.message});
+        throw new APIError(error.statusCode || 500, error.message || "Internal server error", error);
     }
 });
 
@@ -151,7 +151,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
         return res.status(200).json({ message: "User profile updated successfully", user });
     } catch (error) {
         console.error("Error updating user profile:", error);
-        return res.status(500).json({ message: "Internal server error" , error: error.message});
+        throw new APIError(error.statusCode || 500, error.message || "Internal server error", error);
     }
 });
 
@@ -180,7 +180,7 @@ export const changeUserPassword = asyncHandler(async (req, res) => {
         return res.status(200).json({ message: "Password changed successfully" });
     } catch (error) {
         console.error("Error changing user password:", error);
-        return res.status(500).json({ message: "Internal server error", error: error.message});
+        throw new APIError(error.statusCode || 500, error.message || "Internal server error", error);
     }
 });
 
@@ -204,7 +204,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
         return res.status(200).json({ accessToken: newAccessToken });
     } catch (error) {
         console.error("Error refreshing token:", error);
-        return res.status(500).json({ message: "Internal server error", error: error.message});
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 });
 
@@ -234,7 +234,7 @@ if (!profileImagePath ) {
         return res.status(200).json({ message: "Profile picture updated successfully" });
     } catch (error) {
         console.error("Error changing profile picture:", error);
-        return res.status(500).json({ message:error.message, error: error});
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 });
 
@@ -268,7 +268,7 @@ export const getAllUsers = asyncHandler(async (req, res) => {
         return res.status(200).json({ users });
     } catch (error) {
         console.error("Error fetching all users:", error);
-        throw new APIError(500, error.message, error);
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 });
 
@@ -292,7 +292,7 @@ export const toggleFavoriteSong = asyncHandler(async (req, res) => {
         return res.status(200).json({ message: "Favorite songs updated successfully", favorites: user.favorites });
     } catch (error) {
         console.error("Error toggling favorite song:", error);
-        throw new APIError(500,error.message,error);
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 });
 
@@ -309,7 +309,7 @@ export const deleteUserAccount = asyncHandler(async (req, res) => {
         return res.status(200).json({ message: "your account has been deleted successfully" });
     } catch (error) {
         console.error("Error deleting user account:", error);
-        throw new APIError(500, error.message, error);
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 });
 
@@ -325,7 +325,7 @@ export const getUserHistory = asyncHandler(async (req, res) => {
         return res.status(200).json({ history: user.history });
     } catch (error) {
         console.error("Error fetching user history:", error);
-        throw new APIError(500, error.message, error);
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 });
 
@@ -344,7 +344,7 @@ export const getUserFollowCount = asyncHandler(async (req, res) => {
         
     } catch (error) {
         console.error("Error fetching user followers:", error);
-        throw new APIError(500, error.message, error);
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 });
 
@@ -387,7 +387,7 @@ export const getUserFollowings = asyncHandler(async (req, res) => {
         return res.status(200).json({ following });
     } catch (error) {
         console.error("Error fetching user followings:", error);
-        throw new APIError(500, error.message, error);
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 });
 
@@ -430,17 +430,22 @@ export const getUserFollowers = asyncHandler(async (req, res) => {
         return res.status(200).json({ followers });
     } catch (error) {
         console.error("Error fetching user followers:", error);
-        throw new APIError(500, error.message, error);
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 });
 
 export const getUserLibrary = asyncHandler(async (req, res) => {
-    const user = await UserLibrary.findOne({ user: req.user._id }).populate('songs albums artists playlists');
-    if (user) {
-        return res.status(200).json({ library: user });
+    try {
+        const user = await UserLibrary.findOne({ user: req.user._id }).populate('songs albums artists playlists');
+        if (user) {
+            return res.status(200).json({ library: user });
+        }
+        const newUserLibrary = await UserLibrary.create({ user: req.user._id });
+        return res.status(200).json({ library: newUserLibrary });
+    } catch (error) {
+        console.error("Error fetching user library:", error);
+        throw new APIError(error.statusCode || 500, error.message || "Internal server error", error);
     }
-    const newUserLibrary = await UserLibrary.create({ user: req.user._id });
-    return res.status(200).json({ library: newUserLibrary });
 })
 
 export const toggleUserLibraryItem = asyncHandler(async (req, res) => {
@@ -476,7 +481,7 @@ export const toggleUserLibraryItem = asyncHandler(async (req, res) => {
         return res.status(200).json({ message: "User library updated successfully", library: userLibrary });
     } catch (error) {
         console.error("Error toggling user library item:", error);
-        throw new APIError(500, error.message, error);
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 });
 
@@ -505,7 +510,7 @@ export const clearUserLibrary = asyncHandler(async (req, res) => {
 
     } catch (error) {
         console.error("Error clearing user library:", error);
-        throw new APIError(500, error.message, error);
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 });
 
@@ -518,8 +523,19 @@ export const getFavoriteSongs = asyncHandler(async (req, res) => {
         return res.status(200).json({ favorites: user.favorites });
     } catch (error) {
         console.error("Error fetching favorite songs:", error);
-        throw new APIError(error.statusCode || 500, error.message, error);
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
     }
 });
 
-
+export const getUser = asyncHandler(async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select("-password -__v -createdAt -updatedAt -history -favorites");
+        if (!user) {
+            throw new APIError(404, "User not found");
+        }
+        return res.status(200).json({ user });
+    } catch (error) {
+        console.error("Error fetching user:", error);
+        throw new APIError(error.statusCode ||500, error.message||"Internal server error", error);
+    }
+});
