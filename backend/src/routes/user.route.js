@@ -3,7 +3,7 @@ import { registerUser, loginUser, logoutUser, getUserProfile, updateUserProfile,
 import { authenticate , isAdmin  } from '../middlewares/auth.middleware.js';
 import {upload} from "../middlewares/multer.middleware.js"
 import { checkImageExtension } from '../middlewares/file.middleware.js';
-import { followUser, unfollowUser , isFollowing  } from '../controllers/follow.controller.js';
+import { toggleFollowUser, isFollowing  } from '../controllers/follow.controller.js';
 
 const router = express.Router();
 router.post('/register', upload.single("profileImage"), checkImageExtension, registerUser);
@@ -24,8 +24,7 @@ router.put('/toggle-favorite-song/:songId', authenticate, toggleFavoriteSong);
 router.delete('/delete-account', authenticate, deleteUserAccount);
 router.get('/all-users', authenticate, getAllUsers);
 router.get('/all-users/:id', authenticate, getAllUsers);
-router.post('/follow/:id', authenticate, followUser);
-router.delete('/unfollow/:id', authenticate, unfollowUser);
+router.post('/toggle-follow/:id', authenticate, toggleFollowUser);
 router.get('/is-following/:id', authenticate, isFollowing);
 router.get('/library', authenticate, getUserLibrary);
 router.put('/library', authenticate, toggleUserLibraryItem);
