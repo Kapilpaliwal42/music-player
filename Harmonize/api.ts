@@ -7,19 +7,21 @@ const getToken = () => localStorage.getItem('accessToken');
 // Singleton promise to prevent multiple concurrent token refresh requests
 let refreshTokenPromise: Promise<string | null> | null = null;
 
-// Handles the logic for refreshing the access token
+const PUBLIC_ENDPOINTS = ['/users/login', '/users/register'];
+
+// Handles the logic for refreshing the access token using an httpOnly cookie
 const handleRefreshToken = async (): Promise<string | null> => {
     try {
-        const oldToken = getToken();
-        // Can't refresh without an existing (even if expired) token
-        if (!oldToken) throw new Error('No token available for refresh');
-
+        // This request sends the httpOnly refresh token cookie to the server
         const response = await fetch(`${BASE_API_URL}/users/refresh-token`, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${oldToken}` }
+            credentials: 'include', // Crucial for sending cookies
         });
 
-        if (!response.ok) throw new Error('Refresh token request failed');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(errorData?.message || 'Session expired. Please log in again.');
+        }
 
         const data = await response.json();
         const newAccessToken = data.accessToken;
@@ -38,6 +40,7 @@ const handleRefreshToken = async (): Promise<string | null> => {
     }
 };
 
+
 // Generic API client for JSON-based requests with token refresh logic
 const apiClient = async (endpoint: string, options: RequestInit = {}) => {
     const makeRequest = async (token: string | null) => {
@@ -50,7 +53,8 @@ const apiClient = async (endpoint: string, options: RequestInit = {}) => {
 
     let response = await makeRequest(getToken());
 
-    if (response.status === 401) {
+    // Only attempt to refresh the token if the endpoint is protected
+    if (response.status === 401 && !PUBLIC_ENDPOINTS.includes(endpoint)) {
         // If a refresh isn't already in progress, start one.
         if (!refreshTokenPromise) {
             refreshTokenPromise = handleRefreshToken();
@@ -70,8 +74,17 @@ const apiClient = async (endpoint: string, options: RequestInit = {}) => {
     }
     
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: `Request failed with status: ${response.status}` }));
-        throw new Error(errorData.message || 'An unknown API error occurred');
+        let errorMessage = `Request failed with status: ${response.status}`; // Default message
+        try {
+            const errorData = await response.json();
+            // If we get a JSON body with a message property, use it.
+            if (errorData && typeof errorData.message === 'string' && errorData.message.length > 0) {
+                errorMessage = errorData.message;
+            }
+        } catch (e) {
+            // Ignore JSON parsing errors, we'll use the default message.
+        }
+        throw new Error(errorMessage); // Throw the determined error message.
     }
     
     if (response.status === 204) return null;
@@ -91,7 +104,8 @@ const apiUploadClient = async (endpoint: string, formData: FormData, method: 'PO
 
     let response = await makeRequest(getToken());
 
-    if (response.status === 401) {
+    // Only attempt to refresh the token if the endpoint is protected
+    if (response.status === 401 && !PUBLIC_ENDPOINTS.includes(endpoint)) {
         if (!refreshTokenPromise) {
             refreshTokenPromise = handleRefreshToken();
         }
@@ -107,8 +121,16 @@ const apiUploadClient = async (endpoint: string, formData: FormData, method: 'PO
     }
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: `Request failed with status: ${response.status}` }));
-        throw new Error(errorData.message || 'An unknown API error occurred');
+        let errorMessage = `Request failed with status: ${response.status}`; // Default
+        try {
+            const errorData = await response.json();
+            if (errorData && typeof errorData.message === 'string' && errorData.message.length > 0) {
+                errorMessage = errorData.message;
+            }
+        } catch (e) {
+            // Ignore JSON parsing errors, we'll use the default message.
+        }
+        throw new Error(errorMessage);
     }
     
     return response.json();

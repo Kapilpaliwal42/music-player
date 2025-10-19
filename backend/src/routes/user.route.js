@@ -14,7 +14,7 @@ router.post('/logout', authenticate, logoutUser);
 router.get('/get-profile', authenticate, getUserProfile);
 router.put('/update-profile', authenticate, updateUserProfile);
 router.put('/change-password', authenticate, changeUserPassword);
-router.post('/refresh-token',authenticate,refreshToken);
+router.post('/refresh-token',refreshToken);
 router.put('/change-profile-picture',upload.single("profileImage"), checkImageExtension, authenticate, changeUserProfilePicture);
 router.get('/history', authenticate, getUserHistory);
 router.get('/follow-count/:id', authenticate, getUserFollowCount);

@@ -30,7 +30,9 @@ const MoreOptionsMenu: React.FC<MoreOptionsMenuProps> = ({ song, onEdit, onDelet
             const menuWidth = 208;
             
             const verticalClass = rect.bottom + menuHeight > screenHeight ? 'bottom-full mb-2' : 'top-full mt-2';
-            const horizontalClass = rect.left < menuWidth ? 'left-0' : 'right-0';
+            // Correctly check if there's enough space on the right side of the button.
+            // If not, anchor to the right edge. Otherwise, anchor to the left.
+            const horizontalClass = rect.left + menuWidth > screenWidth ? 'right-0' : 'left-0';
             
             setPositionClasses(`${verticalClass} ${horizontalClass}`);
         }
