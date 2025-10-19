@@ -3,8 +3,9 @@ import { Play, Bookmark, X } from 'lucide-react';
 import type { Song, Album, Playlist, Artist, User } from '../types';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
-import { Link } from 'react-router-dom';
 import MoreOptionsMenu from './MoreOptionsMenu';
+import { DEFAULT_AVATAR_URL } from '../constants';
+import { useNavigate } from 'react-router-dom';
 
 interface SectionProps {
   title: string;
@@ -116,10 +117,15 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({ album, onSelect, onClear }
         toggleLibraryItem(album._id, 'albums');
     };
     
+    const handleClear = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onClear) onClear(e);
+    }
+    
     return (
-      <Link to={`/album/${album._id}`} onClick={onSelect} className="block bg-zinc-800/50 p-4 rounded-lg hover:bg-zinc-700/70 transition-colors group cursor-pointer relative">
+      <div onClick={onSelect} className="block bg-zinc-800/50 p-4 rounded-lg hover:bg-zinc-700/70 transition-colors group cursor-pointer relative">
         {onClear && (
-          <button onClick={onClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
+          <button onClick={handleClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
             <X size={16} className="text-zinc-300 hover:text-white" />
           </button>
         )}
@@ -135,7 +141,7 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({ album, onSelect, onClear }
         </div>
         <h3 className="text-white font-semibold truncate">{album.name}</h3>
         <p className="text-zinc-400 text-sm truncate">{Array.isArray(album.artistName) ? album.artistName.join(', ') : ''}</p>
-      </Link>
+      </div>
     );
 };
 
@@ -154,10 +160,15 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onSelect, onClea
         toggleLibraryItem(artist._id, 'artists');
     }
 
+    const handleClear = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onClear) onClear(e);
+    }
+
     return (
-        <Link to={`/artist/${artist._id}`} onClick={onSelect} className="block bg-zinc-800/50 p-4 rounded-lg hover:bg-zinc-700/70 transition-colors group cursor-pointer text-center relative">
+        <div onClick={onSelect} className="block bg-zinc-800/50 p-4 rounded-lg hover:bg-zinc-700/70 transition-colors group cursor-pointer text-center relative">
             {onClear && (
-              <button onClick={onClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
+              <button onClick={handleClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
                 <X size={16} className="text-zinc-300 hover:text-white" />
               </button>
             )}
@@ -172,7 +183,7 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onSelect, onClea
                 </button>
             </div>
             <h3 className="text-white font-semibold truncate">{artist.name}</h3>
-        </Link>
+        </div>
     );
 };
 
@@ -186,16 +197,30 @@ interface PlaylistCardProps {
 // FIX: Explicitly type component as React.FC to handle the 'key' prop correctly.
 export const PlaylistCard: React.FC<PlaylistCardProps> = ({ playlist, onSelect, onClear }) => {
     const { toggleLibraryItem, isBookmarked } = useLibrary();
+    const navigate = useNavigate();
+
+    const handleSelect = () => {
+        if (onSelect) {
+            onSelect();
+        } else {
+            navigate(`/playlist/${playlist._id}`);
+        }
+    };
     
     const handleBookmark = (e: React.MouseEvent) => {
         e.stopPropagation();
         toggleLibraryItem(playlist._id, 'playlists');
     }
+    
+    const handleClear = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onClear) onClear(e);
+    }
 
     return (
-        <Link to={`/playlist/${playlist._id}`} onClick={onSelect} className="bg-zinc-800/50 p-4 rounded-lg hover:bg-zinc-700/70 transition-colors group cursor-pointer flex items-center gap-4 relative">
+        <div onClick={handleSelect} className="bg-zinc-800/50 p-4 rounded-lg hover:bg-zinc-700/70 transition-colors group cursor-pointer flex items-center gap-4 relative">
             {onClear && (
-              <button onClick={onClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
+              <button onClick={handleClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
                 <X size={16} className="text-zinc-300 hover:text-white" />
               </button>
             )}
@@ -211,7 +236,7 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({ playlist, onSelect, 
             >
                 <Bookmark size={18} className={`transition-colors ${isBookmarked(playlist._id, 'playlists') ? 'text-green-400 fill-green-400' : 'text-white'}`} />
             </button>
-        </Link>
+        </div>
     );
 };
 
@@ -222,17 +247,24 @@ interface UserCardProps {
 }
 
 // FIX: Explicitly type component as React.FC to handle the 'key' prop correctly.
-export const UserCard: React.FC<UserCardProps> = ({ user, onSelect, onClear }) => (
-    <div onClick={onSelect} className="bg-zinc-800/50 p-4 rounded-lg hover:bg-zinc-700/70 transition-colors group cursor-pointer text-center relative">
-        {onClear && (
-          <button onClick={onClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
-            <X size={16} className="text-zinc-300 hover:text-white" />
-          </button>
-        )}
-        <div className="relative mb-3">
-            <img src={user.profileImage} alt={user.fullname} className="w-full h-auto aspect-square object-cover rounded-full" />
+export const UserCard: React.FC<UserCardProps> = ({ user, onSelect, onClear }) => {
+    const handleClear = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onClear) onClear(e);
+    };
+
+    return (
+        <div onClick={onSelect} className="block bg-zinc-800/50 p-4 rounded-lg hover:bg-zinc-700/70 transition-colors group cursor-pointer text-center relative">
+            {onClear && (
+              <button onClick={handleClear} className="absolute top-2 left-2 bg-black/50 p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10" title="Remove">
+                <X size={16} className="text-zinc-300 hover:text-white" />
+              </button>
+            )}
+            <div className="relative mb-3">
+                <img src={user.profileImage || DEFAULT_AVATAR_URL} alt={user.fullname} className="w-full h-auto aspect-square object-cover rounded-full" />
+            </div>
+            <h3 className="text-white font-semibold truncate">{user.fullname}</h3>
+            <p className="text-zinc-400 text-sm truncate">@{user.username}</p>
         </div>
-        <h3 className="text-white font-semibold truncate">{user.fullname}</h3>
-        <p className="text-zinc-400 text-sm truncate">@{user.username}</p>
-    </div>
-);
+    );
+};

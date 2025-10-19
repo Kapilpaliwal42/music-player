@@ -1,59 +1,67 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import * as api from '../api';
 import type { User, FollowCountResponse, Playlist } from '../types';
 import { useAuth } from '../context/AuthContext';
 import FollowListModal from '../components/FollowListModal';
 import { PlaylistCard } from '../components/common';
+import { DEFAULT_AVATAR_URL } from '../constants';
 
 const UserProfilePage = () => {
     const { userId } = useParams<{ userId: string }>();
     const { user: currentUser, isFollowing, toggleFollow } = useAuth();
+    const navigate = useNavigate();
 
     const [profileUser, setProfileUser] = useState<User | null>(null);
     const [userPlaylists, setUserPlaylists] = useState<Playlist[]>([]);
     const [followCount, setFollowCount] = useState<FollowCountResponse | null>(null);
-    const [isCurrentlyFollowing, setIsCurrentlyFollowing] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isProfileUserFollowed, setIsProfileUserFollowed] = useState(false);
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalType, setModalType] = useState<'followers' | 'following'>('followers');
 
-    useEffect(() => {
-        const fetchUserData = async () => {
-            if (!userId) {
-                setError("User ID is missing.");
-                setLoading(false);
-                return;
-            }
-            setLoading(true);
-            setError(null);
-            try {
-                // Fetch all profile data, including the authoritative follow status and public playlists
-                const [userRes, countRes, followingStatusRes, playlistsRes] = await Promise.all([
-                    api.getUserById(userId),
-                    api.getFollowCount(userId),
-                    api.isFollowingUser(userId),
-                    api.getUserPlaylists(userId)
-                ]);
+    const fetchUserData = useCallback(async () => {
+        if (!userId) {
+            setError("User ID is missing.");
+            setLoading(false);
+            return;
+        }
+        setLoading(true);
+        setError(null);
+        try {
+            const [userRes, countRes, playlistsRes, followingStatusRes] = await Promise.all([
+                api.getUserById(userId),
+                api.getFollowCount(userId),
+                api.getUserPlaylists(userId),
+                api.isFollowingUser(userId) // Fetch follow status on load
+            ]);
 
-                setProfileUser(userRes.user);
-                setFollowCount(countRes);
-                setIsCurrentlyFollowing(followingStatusRes.isFollowing);
-                setUserPlaylists(playlistsRes.playlists);
+            setProfileUser(userRes.user);
+            setFollowCount(countRes);
+            setUserPlaylists(playlistsRes.playlists);
+            setIsProfileUserFollowed(followingStatusRes.isFollowing);
 
-            } catch (err) {
-                console.error("Failed to fetch user data:", err);
-                setError("Could not load user profile. The user may not exist.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchUserData();
+        } catch (err) {
+            console.error("Failed to fetch user data:", err);
+            setError("Could not load user profile. The user may not exist.");
+        } finally {
+            setLoading(false);
+        }
     }, [userId]);
+
+    useEffect(() => {
+        // Redirect to the main profile page if the user is viewing their own profile via this route
+        if (userId === currentUser?._id) {
+            navigate('/profile', { replace: true });
+            return;
+        }
+        fetchUserData();
+    }, [userId, currentUser, navigate, fetchUserData]);
+
 
     const openModal = (type: 'followers' | 'following') => {
         setModalType(type);
@@ -62,13 +70,20 @@ const UserProfilePage = () => {
     
     const handleFollowToggle = async () => {
         if (!profileUser) return;
-        
-        // Optimistically update the UI for a responsive feel
-        setIsCurrentlyFollowing(prev => !prev);
-        
-        // Call the global state handler from AuthContext which handles the API call
-        // and refetches the user profile for eventual consistency.
-        await toggleFollow(profileUser._id);
+        try {
+            // This updates the backend and the central auth context
+            await toggleFollow(profileUser._id);
+            // Re-verify status locally to ensure this component's UI is up to date
+            const { isFollowing: newStatus } = await api.isFollowingUser(profileUser._id);
+            setIsProfileUserFollowed(newStatus);
+        } catch (err) {
+            console.error("Follow toggle failed:", err);
+            // If the toggle fails, refetch the original state to be safe
+            if (userId) {
+                 const { isFollowing: originalStatus } = await api.isFollowingUser(userId);
+                 setIsProfileUserFollowed(originalStatus);
+            }
+        }
     };
 
     if (loading) {
@@ -79,13 +94,11 @@ const UserProfilePage = () => {
         return <div className="p-6 text-center text-red-400">{error || 'User not found.'}</div>;
     }
 
-    const isOwnProfile = currentUser?._id === profileUser._id;
-    
     return (
         <>
             <div className="p-6 text-white max-w-4xl mx-auto">
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-                    <img src={profileUser.profileImage} alt={profileUser.fullname} className="w-40 h-40 rounded-full object-cover border-4 border-zinc-800" />
+                    <img src={profileUser.profileImage || DEFAULT_AVATAR_URL} alt={profileUser.fullname} className="w-40 h-40 rounded-full object-cover border-4 border-zinc-800" />
                     <div className="text-center md:text-left">
                         <h1 className="text-4xl font-bold">{profileUser.fullname}</h1>
                         <p className="text-lg text-zinc-400">@{profileUser.username}</p>
@@ -101,18 +114,16 @@ const UserProfilePage = () => {
                             </button>
                         </div>
 
-                        {!isOwnProfile && (
-                             <button 
-                                onClick={handleFollowToggle}
-                                className={`mt-6 w-full md:w-auto px-6 py-2 rounded-full font-semibold transition-colors ${
-                                    isCurrentlyFollowing 
-                                    ? 'bg-zinc-700 hover:bg-zinc-600' 
-                                    : 'bg-indigo-500 hover:bg-indigo-400'
-                                }`}
-                            >
-                                {isCurrentlyFollowing ? 'Unfollow' : 'Follow'}
-                            </button>
-                        )}
+                         <button 
+                            onClick={handleFollowToggle}
+                            className={`mt-6 w-full md:w-auto px-6 py-2 rounded-full font-semibold transition-colors ${
+                                isProfileUserFollowed
+                                ? 'bg-zinc-700 hover:bg-zinc-600' 
+                                : 'bg-indigo-500 hover:bg-indigo-400'
+                            }`}
+                        >
+                            {isProfileUserFollowed ? 'Unfollow' : 'Follow'}
+                        </button>
                     </div>
                 </div>
 
@@ -121,7 +132,7 @@ const UserProfilePage = () => {
                     {userPlaylists.length > 0 ? (
                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {userPlaylists.map(playlist => (
-                                <PlaylistCard key={playlist._id} playlist={playlist} />
+                                <PlaylistCard key={playlist._id} playlist={playlist} onSelect={() => navigate(`/playlist/${playlist._id}`)} />
                             ))}
                         </div>
                     ) : (
@@ -137,7 +148,7 @@ const UserProfilePage = () => {
                     onClose={() => setIsModalOpen(false)}
                     userId={userId}
                     type={modalType}
-                    isFollowing={isFollowing} // Still passed for the modal list view
+                    isFollowing={isFollowing}
                 />
             )}
         </>

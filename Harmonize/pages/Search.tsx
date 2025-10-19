@@ -99,15 +99,24 @@ const SearchPage = () => {
             return newHistory;
         });
 
-        // Action on select - e.g., play song or navigate
-        if (itemType === 'songs') {
-            playSong(item as Song);
-        } else if (itemType === 'users') {
-            navigate(`/profile/${item._id}`);
-        } else if (itemType === 'playlists') {
-            navigate(`/playlist/${item._id}`);
+        // Action on select - e.g., play song or navigate.
+        switch(itemType) {
+            case 'songs':
+                playSong(item as Song);
+                break;
+            case 'albums':
+                navigate(`/album/${item._id}`);
+                break;
+            case 'artists':
+                navigate(`/artist/${item._id}`);
+                break;
+            case 'users':
+                navigate(`/profile/${item._id}`);
+                break;
+            case 'playlists':
+                navigate(`/playlist/${item._id}`);
+                break;
         }
-        // Add navigation for albums, artists, etc. here if needed
     }, [playSong, navigate]);
     
     const clearHistoryItem = useCallback((id: string, type: 'query' | 'selection', e?: React.MouseEvent) => {

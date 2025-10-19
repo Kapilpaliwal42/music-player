@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import * as api from '../api';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { DEFAULT_AVATAR_URL } from '../constants';
 
 // --- Reusable UI Components ---
 
@@ -125,7 +126,7 @@ const ProfileDetailsForm = ({ user, onUpdate }: FormProps) => {
 // Profile Picture Form
 const ProfilePictureForm = ({ user, onUpdate }: FormProps) => {
     const [imageFile, setImageFile] = useState<File | null>(null);
-    const [preview, setPreview] = useState(user.profileImage);
+    const [preview, setPreview] = useState(user.profileImage || DEFAULT_AVATAR_URL);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');

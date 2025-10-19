@@ -7,6 +7,7 @@ import type { User, Playlist } from '../types';
 import { Loader2, ShieldCheck, ShieldOff, Trash2, ListMusic, X, LogOut, Users, UserCheck, UserCog } from 'lucide-react';
 import ConfirmationModal from '../components/ConfirmationModal';
 import UserPlaylistsModal from '../components/UserPlaylistsModal';
+import { DEFAULT_AVATAR_URL } from '../constants';
 
 // --- Stat Card Component ---
 const StatCard = ({ title, value, icon }: { title: string; value: number; icon: React.ReactNode }) => (
@@ -174,7 +175,7 @@ const AdminPage = () => {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="flex-shrink-0 h-10 w-10">
-                                                    <img className="h-10 w-10 rounded-full object-cover" src={user.profileImage} alt="" />
+                                                    <img className="h-10 w-10 rounded-full object-cover" src={user.profileImage || DEFAULT_AVATAR_URL} alt="" />
                                                 </div>
                                                 <div className="ml-4">
                                                     <div className="text-sm font-medium text-white">{user.fullname}</div>

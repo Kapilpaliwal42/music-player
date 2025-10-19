@@ -6,6 +6,7 @@ import * as api from '../api';
 import type { Artist, Album, Song } from '../types';
 import { usePlayer } from '../context/PlayerContext';
 import { useAuth } from '../context/AuthContext';
+import { useLibrary } from '../context/LibraryContext';
 import InteractiveSongRow from '../components/InteractiveSongRow';
 import { Section, AlbumCard } from '../components/common';
 import MoreOptionsMenu from '../components/MoreOptionsMenu';
@@ -15,7 +16,8 @@ import ConfirmationModal from '../components/ConfirmationModal';
 const ArtistPage = () => {
     const { artistId } = useParams<{ artistId: string }>();
     const { setPlaylistAndPlay } = usePlayer();
-    const { user, isFollowing, toggleFollow } = useAuth();
+    const { user } = useAuth();
+    const { isBookmarked, toggleLibraryItem } = useLibrary();
     const navigate = useNavigate();
 
     const [artist, setArtist] = useState<Artist | null>(null);
@@ -23,7 +25,7 @@ const ArtistPage = () => {
     const [albums, setAlbums] = useState<Album[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [isCurrentlyFollowing, setIsCurrentlyFollowing] = useState(false);
+    const [isArtistBookmarked, setIsArtistBookmarked] = useState(false);
 
     const [isAddToPlaylistModalOpen, setIsAddToPlaylistModalOpen] = useState(false);
     const [songToAdd, setSongToAdd] = useState<Song | null>(null);
@@ -51,13 +53,12 @@ const ArtistPage = () => {
             setArtist(response.artist);
             setTopSongs(response.songs || []);
             setAlbums(response.albums || []);
-            setIsCurrentlyFollowing(isFollowing(artistId));
         } catch (err) {
             setError("Could not load artist details.");
         } finally {
             setLoading(false);
         }
-    }, [artistId, isFollowing]);
+    }, [artistId]);
 
 
     useEffect(() => {
@@ -66,19 +67,19 @@ const ArtistPage = () => {
 
     useEffect(() => {
       if(artistId) {
-        setIsCurrentlyFollowing(isFollowing(artistId));
+        setIsArtistBookmarked(isBookmarked(artistId, 'artists'));
       }
-    }, [user?.following, artistId, isFollowing]);
+    }, [artistId, isBookmarked]);
 
     const handleOpenAddToPlaylist = (song: Song) => {
         setSongToAdd(song);
         setIsAddToPlaylistModalOpen(true);
     };
 
-    const handleFollowToggle = async () => {
+    const handleBookmarkToggle = async () => {
         if (!artist) return;
-        setIsCurrentlyFollowing(prev => !prev);
-        await toggleFollow(artist._id);
+        setIsArtistBookmarked(prev => !prev);
+        await toggleLibraryItem(artist._id, 'artists');
     };
 
     const promptDeleteArtist = () => {
@@ -171,14 +172,14 @@ const ArtistPage = () => {
                             </button>
                             {!isOwnProfile && (
                                 <button 
-                                    onClick={handleFollowToggle}
+                                    onClick={handleBookmarkToggle}
                                     className={`px-6 py-2 rounded-full font-semibold border-2 transition-colors ${
-                                        isCurrentlyFollowing 
+                                        isArtistBookmarked 
                                         ? 'bg-transparent border-white text-white hover:bg-white/10' 
                                         : 'bg-white text-black border-white hover:bg-zinc-200'
                                     }`}
                                 >
-                                    {isCurrentlyFollowing ? 'Following' : 'Follow'}
+                                    {isArtistBookmarked ? 'Following' : 'Follow'}
                                 </button>
                             )}
                             <MoreOptionsMenu 
@@ -209,7 +210,7 @@ const ArtistPage = () => {
                             <div className="mt-12">
                                 <Section title="Albums">
                                     {albums.map(album => (
-                                        <AlbumCard key={album._id} album={album} />
+                                        <AlbumCard key={album._id} album={album} onSelect={() => navigate(`/album/${album._id}`)} />
                                     ))}
                                 </Section>
                             </div>

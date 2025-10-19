@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLibrary } from '../context/LibraryContext';
 import FollowListModal from '../components/FollowListModal';
 import { PlaylistCard } from '../components/common';
+import { DEFAULT_AVATAR_URL } from '../constants';
 
 const ProfilePage = () => {
     const { user, isFollowing } = useAuth();
@@ -55,7 +56,7 @@ const ProfilePage = () => {
         <>
             <div className="p-6 text-white max-w-4xl mx-auto">
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-                    <img src={user.profileImage} alt={user.fullname} className="w-40 h-40 rounded-full object-cover border-4 border-zinc-800" />
+                    <img src={user.profileImage || DEFAULT_AVATAR_URL} alt={user.fullname} className="w-40 h-40 rounded-full object-cover border-4 border-zinc-800" />
                     <div className="text-center md:text-left">
                         <h1 className="text-4xl font-bold">{user.fullname}</h1>
                         <p className="text-lg text-zinc-400">@{user.username}</p>

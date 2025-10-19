@@ -1,6 +1,6 @@
 import type { User, Song, Playlist, Artist, Album, GetSongsResponse, GetArtistsResponse, GetAlbumsResponse, GetLibraryResponse, BookmarkableItemType, SearchResponse, GetUsersResponse, FollowCountResponse, FollowersResponse, FollowingsResponse, GetArtistResponse, GetHistoryResponse } from './types';
 
-const BASE_API_URL = process.env.BACKEND_API_URL || 'https://music-player-wtp8.onrender.com/api/v1';
+const BASE_API_URL = 'https://music-player-wtp8.onrender.com/api/v1'; 
 
 const getToken = () => localStorage.getItem('accessToken');
 
@@ -216,9 +216,9 @@ export const searchUsers = async (query: string): Promise<GetUsersResponse> => {
 };
 
 export const getUserById = async (userId: string): Promise<{ user: User }> => {
-    const response = await apiClient(`/users/all-users/${userId}`);
-    if (response.users && response.users.length > 0) {
-        return { user: response.users[0] };
+    const response = await apiClient(`/users/get-by-id/${userId}`);
+    if (response.user) {
+        return { user: response.user };
     }
     throw new Error('User not found');
 };
@@ -227,8 +227,7 @@ export const getFollowCount = async (userId: string): Promise<FollowCountRespons
 export const getFollowers = async (userId: string): Promise<FollowersResponse> => apiClient(`/users/followers/${userId}`);
 export const getFollowings = async (userId: string): Promise<FollowingsResponse> => apiClient(`/users/followings/${userId}`);
 
-export const followUser = async (userId: string): Promise<{ message: string }> => apiClient(`/users/follow/${userId}`, { method: 'POST' });
-export const unfollowUser = async (userId: string): Promise<{ message: string }> => apiClient(`/users/unfollow/${userId}`, { method: 'POST' });
+export const toggleFollowUser = async (userId: string): Promise<{ message: string }> => apiClient(`/users/toggle-follow/${userId}`, { method: 'POST' });
 
 export const isFollowingUser = async (userId: string): Promise<{ isFollowing: boolean }> => {
     return apiClient(`/users/is-following/${userId}`);

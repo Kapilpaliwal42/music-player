@@ -98,37 +98,38 @@ export const AuthProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const toggleFollow = useCallback(async (userId: string) => {
     if (!user) return;
 
-    const isCurrentlyFollowing = user.following?.includes(userId) ?? false;
-
-    // Optimistically update the UI for a responsive feel
-    const newFollowing = isCurrentlyFollowing
-      ? (user.following || []).filter(id => id !== userId)
-      : [...(user.following || []), userId];
+    const originalFollowing = [...(user.following || [])];
     
-    setUser(prevUser => prevUser ? { ...prevUser, following: newFollowing } : null);
-
     try {
-      if (isCurrentlyFollowing) {
-        await api.unfollowUser(userId);
-      } else {
-        await api.followUser(userId);
-      }
-    } catch (error) {
-        // A 409 "Already following" or similar is a state mismatch, not a critical failure.
-        // The `finally` block will correct the UI, so we can avoid logging this specific error
-        // to prevent alarming the user.
-        if (error instanceof Error && (error.message.includes("Already following") || error.message.includes("Not following"))) {
-            // Silently ignore, as this is a recoverable state mismatch.
-        } else {
-            // Log any other unexpected errors.
-            console.error("Failed to toggle follow:", error);
+      // Perform the toggle action
+      await api.toggleFollowUser(userId);
+      
+      // Explicitly re-check the follow status from the server to get the ground truth
+      const { isFollowing: newStatus } = await api.isFollowingUser(userId);
+
+      // Update the central state based on the verified status
+      setUser(prevUser => {
+        if (!prevUser) return null;
+        const currentFollowing = [...(prevUser.following || [])];
+        const userIsCurrentlyInState = currentFollowing.includes(userId);
+
+        if (newStatus && !userIsCurrentlyInState) {
+          // API says we are following, but state doesn't reflect it -> Add
+          return { ...prevUser, following: [...currentFollowing, userId] };
+        } else if (!newStatus && userIsCurrentlyInState) {
+          // API says we are not following, but state does reflect it -> Remove
+          return { ...prevUser, following: currentFollowing.filter(id => id !== userId) };
         }
-    } finally {
-      // Always refetch the user profile to ensure the UI is perfectly in sync
-      // with the server's state, providing a reliable source of truth.
-      await fetchUserProfile();
+        
+        // If state is already correct, no change is needed
+        return prevUser;
+      });
+    } catch (error) {
+      console.error("Failed to toggle follow:", error);
+      // On any failure in the process, revert to the original state
+      setUser(prevUser => prevUser ? { ...prevUser, following: originalFollowing } : null);
     }
-  }, [user, fetchUserProfile]);
+  }, [user]);
 
 
   const value = { user, loading, login, logout, isFavorite, toggleFavorite, isFollowing, toggleFollow, fetchUserProfile };

@@ -4,6 +4,7 @@ import { X, Loader2 } from 'lucide-react';
 import * as api from '../api';
 import type { Follower, Following } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { DEFAULT_AVATAR_URL } from '../constants';
 
 interface FollowListModalProps {
     isOpen: boolean;
@@ -81,7 +82,7 @@ const FollowListModal: React.FC<FollowListModalProps> = ({ isOpen, onClose, user
                                         onClick={onClose}
                                         className="flex items-center gap-4 p-2 rounded-lg hover:bg-zinc-800 transition-colors"
                                     >
-                                        <img src={user.profileImage} alt={user.fullname} className="w-12 h-12 rounded-full object-cover" />
+                                        <img src={user.profileImage || DEFAULT_AVATAR_URL} alt={user.fullname} className="w-12 h-12 rounded-full object-cover" />
                                         <div className="overflow-hidden">
                                             <p className="font-semibold text-white truncate">{user.fullname}</p>
                                             <p className="text-sm text-zinc-400 truncate">@{user.username}</p>
