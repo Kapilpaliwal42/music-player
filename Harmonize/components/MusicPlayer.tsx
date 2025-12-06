@@ -221,6 +221,12 @@ const MusicPlayer = () => {
     }
   };
 
+  const handleLyricClick = (time: number) => {
+      if (time >= 0) {
+          seek(time);
+      }
+  };
+
   const isMainPlayerVisible = !isCompactModeActive && !isPlayerSheetOpen && !isLyricsFullScreen;
   const isPlayerSheetVisible = isPlayerSheetOpen && !isCompactModeActive;
   
@@ -232,7 +238,7 @@ const MusicPlayer = () => {
   const progressPercentage = duration > 0 ? (progress / duration) * 100 : 0;
 
   const renderArtistLinks = (isCentered = false) => (
-    <div className={`text-indigo-400 capitalize mt-1 truncate ${isCentered ? 'text-center' : ''}`}>
+    <div className={`text-indigo-400 capitalize mt-1 ${isCentered ? 'text-center' : 'truncate'}`}>
         {songToDisplay.artist && songToDisplay.artist.length > 0 ? (
             songToDisplay.artist.map((artist, index) => (
                 <React.Fragment key={artist._id}>
@@ -248,11 +254,11 @@ const MusicPlayer = () => {
 
   const renderAlbumLink = (isCentered = false) => (
        songToDisplay.album?._id ? (
-          <Link to={`/album/${songToDisplay.album._id}`} onClick={(e) => e.stopPropagation()} className={`text-zinc-500 text-sm mt-0.5 hover:underline truncate ${isCentered ? 'text-center' : ''}`}>
+          <Link to={`/album/${songToDisplay.album._id}`} onClick={(e) => e.stopPropagation()} className={`text-zinc-500 text-sm mt-0.5 hover:underline ${isCentered ? 'text-center block' : 'truncate block'}`}>
               {songToDisplay.albumName}
           </Link>
       ) : (
-          <p className={`text-zinc-500 text-sm mt-0.5 truncate ${isCentered ? 'text-center' : ''}`}>
+          <p className={`text-zinc-500 text-sm mt-0.5 ${isCentered ? 'text-center' : 'truncate'}`}>
               {songToDisplay.albumName}
           </p>
       )
@@ -298,7 +304,13 @@ const MusicPlayer = () => {
         <div onClick={(e) => e.stopPropagation()} ref={lyricsScrollRef} className="absolute top-1/2 left-1/2 w-full max-w-lg h-52 overflow-y-auto z-10 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden text-center space-y-1" style={{ transform: 'translate(-50%, calc(-50% - 55px))', backdropFilter: 'none', backgroundColor: 'transparent' }}>
             {parsedLyrics.hasTimestamps ? (
                  parsedLyrics.lines.map((line, index) => 
-                    <p key={index} className={`transition-all duration-300 drop-shadow-lg leading-normal ${index === currentLyricLineIndex ? 'text-indigo-400 font-bold text-xl scale-110' : 'text-zinc-400 text-xl'}`}>{line.text}</p>)
+                    <p 
+                        key={index} 
+                        onClick={(e) => { e.stopPropagation(); handleLyricClick(line.time); }}
+                        className={`transition-all duration-300 drop-shadow-lg leading-normal cursor-pointer hover:text-white ${index === currentLyricLineIndex ? 'text-indigo-400 font-bold text-xl scale-110' : 'text-zinc-400 text-xl'}`}
+                    >
+                        {line.text}
+                    </p>)
             ) : (
                 <div className="text-zinc-400 text-xl leading-normal whitespace-pre-wrap">{parsedLyrics.lines.map(l => l.text).join('\n')}</div>
             )}
@@ -311,7 +323,13 @@ const MusicPlayer = () => {
                 {parsedLyrics.lines.length > 0 ? (
                     parsedLyrics.hasTimestamps ? (
                          parsedLyrics.lines.map((line, idx) => 
-                            <p key={idx} className={`text-base leading-relaxed transition-all duration-300 ${ idx === currentLyricLineIndex ? 'text-indigo-400 font-bold scale-110' : 'text-zinc-300 opacity-70'}`}>{line.text}</p>)
+                            <p 
+                                key={idx} 
+                                onClick={(e) => { e.stopPropagation(); handleLyricClick(line.time); }}
+                                className={`text-base leading-relaxed transition-all duration-300 cursor-pointer hover:text-white ${ idx === currentLyricLineIndex ? 'text-indigo-400 font-bold scale-110' : 'text-zinc-300 opacity-70'}`}
+                            >
+                                {line.text}
+                            </p>)
                     ) : (
                         <div className="text-zinc-300 opacity-90 text-base leading-relaxed whitespace-pre-wrap">{parsedLyrics.lines.map(l => l.text).join('\n')}</div>
                     )
@@ -327,7 +345,7 @@ const MusicPlayer = () => {
       
       <div onClick={(e) => e.stopPropagation()} className={`w-full max-w-lg bg-zinc-900/95 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-zinc-800 relative z-20 text-white transition-all duration-300 pointer-events-auto ${isMainPlayerVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
         <header onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className="flex justify-between items-center pb-6 border-b border-zinc-800"><h1 className="text-2xl font-bold text-indigo-400">Music Player</h1><div className="flex items-center space-x-2"><button onClick={(e) => { e.stopPropagation(); setIsPlayerSheetOpen(true); }} className="p-2 rounded-full hover:bg-zinc-800 transition" title="Open Player Sheet/Visualizer"><MoveDown size={20} /></button><button onClick={toggleCompactMode} className="p-2 rounded-full hover:bg-zinc-800 transition" title="Mini Player Mode"><Minimize2 size={20} /></button></div></header>
-        <div className="flex flex-col items-center mt-8">
+        <div className="flex flex-col items-center mt-8 px-4">
           <div className="relative w-64 h-64 mb-6 rounded-xl overflow-hidden shadow-2xl">
             <img src={songToDisplay.coverImage} alt={`${songToDisplay.title} cover`} className="w-full h-full object-cover"/>
             {showLyricsOverlay && 
@@ -336,7 +354,13 @@ const MusicPlayer = () => {
                         {parsedLyrics?.lines?.length > 0 ? (
                             parsedLyrics.hasTimestamps ? (
                                 parsedLyrics.lines.map((line, index) => 
-                                    <p key={index} className={`py-1 transition-all duration-300 ${index === currentLyricLineIndex ? 'text-indigo-400 text-lg font-bold scale-110' : 'text-zinc-300'}`}>{line.text}</p>)
+                                    <p 
+                                        key={index} 
+                                        onClick={(e) => { e.stopPropagation(); handleLyricClick(line.time); }}
+                                        className={`py-1 transition-all duration-300 cursor-pointer hover:text-white ${index === currentLyricLineIndex ? 'text-indigo-400 text-lg font-bold scale-110' : 'text-zinc-300'}`}
+                                    >
+                                        {line.text}
+                                    </p>)
                             ) : (
                                <div className="text-zinc-300 text-base font-medium leading-relaxed whitespace-pre-wrap">{parsedLyrics.lines.map(l => l.text).join('\n')}</div>
                             )
