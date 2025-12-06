@@ -119,14 +119,16 @@ const MusicPlayer = () => {
 
   useEffect(() => {
     if (!parsedLyrics.hasTimestamps || parsedLyrics.lines.length === 0 || !isPlaying) return;
+    
     const newIndex = parsedLyrics.lines.findIndex(
       (line, idx) =>
         progress >= line.time &&
         (idx === parsedLyrics.lines.length - 1 || progress < parsedLyrics.lines[idx + 1].time)
     );
+
     if (newIndex !== currentLyricLineIndex && newIndex !== -1) {
       setCurrentLyricLineIndex(newIndex);
-      if (lyricsScrollRef.current) {
+      if (lyricsScrollRef.current && lyricsScrollRef.current.children) {
         const el = lyricsScrollRef.current.children[newIndex] as HTMLElement;
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
       }
@@ -222,8 +224,13 @@ const MusicPlayer = () => {
   };
 
   const handleLyricClick = (time: number) => {
-      if (time >= 0) {
-          seek(time);
+      if (time >= 0 && audioRef.current) {
+          // Directly set currentTime.
+          // IMPORTANT: Do NOT use `seek(time)` here. The `seek` function in PlayerContext
+          // sets `isSeekingRef.current = true` and waits for a `mouseup` event to release it.
+          // On mobile (touch), a tap does not always guarantee a mouseup sequence that clears this flag,
+          // causing the player progress to freeze and lyrics syncing to stop.
+          audioRef.current.currentTime = time;
       }
   };
 
