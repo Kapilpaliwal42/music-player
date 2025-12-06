@@ -1,6 +1,5 @@
 import cloudinary from 'cloudinary';
 import streamifier from 'streamifier';
-import fs from 'fs';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -10,6 +9,19 @@ cloudinary.v2.config({
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_CLOUD_SECRET
 })
+
+function sanitizePublicId(filename) {
+  return filename
+    // Replace spaces with underscores
+    .replace(/\s+/g, "_")
+    // Remove all characters except letters, numbers, underscores, hyphens, slashes, and dot
+    .replace(/[^a-zA-Z0-9_\-/.]/g, "")
+    // Prevent multiple underscores in a row
+    .replace(/_+/g, "_")
+    // Trim underscores or hyphens from start/end
+    .replace(/^[_-]+|[_-]+$/g, "");
+}
+
 
 
 const MAX_BASE64_SIZE = 10 * 1024 * 1024; // 10MB
@@ -24,6 +36,8 @@ export const uploadBufferToCloudinary = (buffer, filename) => {
     if (buffer.length <= MAX_BASE64_SIZE) {
       const base64 = buffer.toString('base64');
       const dataUri = `data:application/octet-stream;base64,${base64}`;
+
+      filename = sanitizePublicId(filename);
 
       cloudinary.v2.uploader.upload(
         dataUri,

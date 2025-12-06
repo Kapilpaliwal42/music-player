@@ -6,7 +6,7 @@ const checkAudioExtension = (req, res, next) => {
     if(!audioFile) {
        return next();
     }
-    const allowedAudioExtensions = ['.mp3', '.wav', '.ogg', '.flac'];
+    const allowedAudioExtensions = ['.mp3', '.wav', '.ogg', '.flac','.mpeg'];
     const allowedImageExtensions = ['.jpg', '.jpeg', '.png', '.gif'];
     if (audioFile) {
         const audioExtension = audioFile.originalname.substring(audioFile.originalname.lastIndexOf('.')).toLowerCase();

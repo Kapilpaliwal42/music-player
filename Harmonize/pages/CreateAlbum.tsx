@@ -70,23 +70,45 @@ const CreateAlbumPage = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || artistIds.length === 0 || !coverImage) {
-            setError('Album Name, Artist, and Cover Image are required.');
+        
+        // Sanitize and deduplicate artist IDs
+        // This prevents the "One or more artists not found" error caused by length mismatch
+        // in the backend check: if (artists.length !== artistId.length)
+        const uniqueArtistIds: string[] = Array.from(new Set(artistIds.filter(id => id && id.trim() !== '')));
+
+        if (!name.trim()) {
+            setError('Album Name is required.');
             return;
         }
+        if (uniqueArtistIds.length === 0) {
+            setError('Please select at least one artist.');
+            return;
+        }
+        if (!coverImage) {
+            setError('Cover Image is required.');
+            return;
+        }
+
         setError(null);
         setSuccess(null);
         setIsLoading(true);
 
-        const formData = new FormData();
-        formData.append('name', name);
-        artistIds.forEach(id => formData.append('artistIds', id));
-        formData.append('coverImage', coverImage);
-        if(description) formData.append('description', description);
-        if(releaseDate) formData.append('releaseDate', releaseDate);
-        if(genre) formData.append('genre', genre);
-        
         try {
+            const formData = new FormData();
+            formData.append('name', name.trim());
+            
+            // Append unique artist IDs using the 'artistId' key.
+            // Using 'artistId' (singular) because the backend code likely extracts `artistId` from body
+            uniqueArtistIds.forEach((id) => {
+                formData.append('artistId', id);
+            });
+            
+            formData.append('coverImage', coverImage);
+            
+            if(description.trim()) formData.append('description', description.trim());
+            if(releaseDate) formData.append('releaseDate', releaseDate);
+            if(genre.trim()) formData.append('genre', genre.trim());
+            
             const response = await api.createAlbum(formData);
             setSuccess(response.message + " Redirecting to your library...");
             setTimeout(() => navigate('/library'), 2000);
